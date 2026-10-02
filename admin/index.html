@@ -86,7 +86,9 @@
         </section>
 
         <section id="salesView" class="view">
+          <button id="addJob" class="primary">Add job / payment</button>
           <div id="salesKpis" class="kpi-grid"></div>
+          <article class="panel table-panel"><h2>Recent jobs / payments</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer / house</th><th>Service</th><th>Quoted</th><th>Collected</th><th>Balance</th><th>Status</th><th>Method</th><th></th></tr></thead><tbody id="jobsTable"></tbody></table></div></article>
           <div class="grid-2"><article class="panel"><p class="eyebrow">REVENUE</p><h2>Revenue by source</h2><div id="revenueSources"></div></article><article class="panel"><p class="eyebrow">SERVICES</p><h2>Revenue by service</h2><div id="revenueServices"></div></article></div>
         </section>
 
@@ -110,6 +112,28 @@
       </div>
       <label>Notes<textarea id="editNotes" rows="5"></textarea></label>
       <div class="dialog-actions"><button type="button" id="cancelLead" class="secondary">Cancel</button><button type="submit" class="primary">Save changes</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="jobDialog">
+    <form id="jobForm" method="dialog">
+      <div class="dialog-head"><h2 id="jobTitle">Add job / payment</h2><button type="button" id="closeJob" class="icon-btn" aria-label="Close job">×</button></div>
+      <p class="muted">Record a completed job. Paid marks a linked customer as won. Linked jobs replace that customer's CRM money totals.</p>
+      <input id="jobId" type="hidden">
+      <div class="form-grid">
+        <label>Customer / house name<input id="jobCustomer" list="jobCustomers" maxlength="160" required autocomplete="off"></label>
+        <datalist id="jobCustomers"></datalist>
+        <label>Service<input id="jobService" list="jobServices" maxlength="180" required></label>
+        <datalist id="jobServices"><option>Standard / recurring</option><option>One-time clean</option><option>Deep clean</option><option>Move-in / move-out</option></datalist>
+        <label>Amount quoted (optional)<input id="jobQuoted" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Not quoted"></label>
+        <label>Amount collected<input id="jobCollected" type="number" min="0" step="0.01" inputmode="decimal" required></label>
+        <label>Payment status<select id="jobStatus"><option>Paid</option><option>Partial</option><option>Unpaid</option></select></label>
+        <label>Payment method<select id="jobMethod"><option>Cash</option><option>Card</option><option>Check</option><option>Venmo</option><option>Other</option></select></label>
+        <label>Job date<input id="jobDate" type="date" required></label>
+      </div>
+      <label>Notes (optional)<textarea id="jobNotes" rows="2" maxlength="4000"></textarea></label>
+      <p id="jobError" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button id="cancelJob" type="button" class="secondary">Cancel</button><button id="saveJob" type="submit" class="primary">Save job</button></div>
     </form>
   </dialog>
 
