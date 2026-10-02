@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://admin.bells-pvm.workers.dev; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'self'">
+  <title>Sparkly Nikki · Business Dashboard</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="loginView" class="login-shell">
+    <main class="login-card" aria-labelledby="loginTitle">
+      <div class="brand-mark" aria-hidden="true">✦</div>
+      <p class="eyebrow">SPARKLY NIKKI</p>
+      <h1 id="loginTitle">Business dashboard</h1>
+      <p class="muted">Private analytics, leads, sales, and site health.</p>
+      <form id="loginForm" autocomplete="on">
+        <label>Username<input id="username" name="username" autocomplete="username" required></label>
+        <label>Password<input id="password" name="password" type="password" autocomplete="current-password" required></label>
+        <button class="primary" type="submit">Sign in</button>
+        <p id="loginError" class="form-error" role="alert"></p>
+      </form>
+    </main>
+  </div>
+
+  <div id="appView" class="app-shell hidden">
+    <aside class="sidebar">
+      <div class="side-brand"><span>✦</span><strong>Sparkly Nikki</strong></div>
+      <nav id="nav">
+        <button data-view="overview" class="active">Overview</button>
+        <button data-view="leads">Leads & CRM</button>
+        <button data-view="analytics">Analytics</button>
+        <button data-view="sales">Sales</button>
+        <button data-view="health">Site health</button>
+      </nav>
+      <div class="side-footer">
+        <div id="apiStatus" class="status-dot-row"><span class="status-dot"></span><span>Checking API</span></div>
+        <button id="logoutBtn" class="ghost">Sign out</button>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <div><p class="eyebrow" id="sectionEyebrow">BUSINESS OVERVIEW</p><h1 id="sectionTitle">Dashboard</h1></div>
+        <div class="top-actions">
+          <select id="dateRange" aria-label="Date range">
+            <option value="7">Last 7 days</option>
+            <option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option>
+            <option value="365">Last year</option>
+            <option value="all">All time</option>
+          </select>
+          <button id="refreshBtn" class="secondary">Refresh</button>
+        </div>
+      </header>
+
+      <main id="content">
+        <section id="overviewView" class="view active-view">
+          <div id="kpis" class="kpi-grid"></div>
+          <div class="grid-2">
+            <article class="panel"><div class="panel-head"><div><p class="eyebrow">TREND</p><h2>Leads & visitors</h2></div></div><div id="trendChart" class="chart"></div></article>
+            <article class="panel"><div class="panel-head"><div><p class="eyebrow">FUNNEL</p><h2>Visitor → customer</h2></div></div><div id="funnelChart" class="funnel"></div></article>
+          </div>
+          <div class="grid-3">
+            <article class="panel"><div class="panel-head"><div><p class="eyebrow">MARKETING</p><h2>Lead sources</h2></div></div><div id="sourceBreakdown"></div></article>
+            <article class="panel"><div class="panel-head"><div><p class="eyebrow">SERVICES</p><h2>Most valuable</h2></div></div><div id="serviceBreakdown"></div></article>
+            <article class="panel"><div class="panel-head"><div><p class="eyebrow">RECENT</p><h2>Newest leads</h2></div><button class="text-btn" data-go="leads">View all</button></div><div id="recentLeads"></div></article>
+          </div>
+        </section>
+
+        <section id="leadsView" class="view">
+          <div class="toolbar panel slim">
+            <input id="leadSearch" placeholder="Search name, email, phone, service…" aria-label="Search leads">
+            <select id="leadStatus"><option value="">All statuses</option><option>New</option><option>Contacted</option><option>Quote Sent</option><option>Won</option><option>Lost</option></select>
+            <button id="exportBtn" class="secondary">Export CSV</button>
+          </div>
+          <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Lead</th><th>Service</th><th>Source</th><th>Status</th><th>Quote</th><th>Revenue</th><th>Received</th><th></th></tr></thead><tbody id="leadsTable"></tbody></table></div></article>
+        </section>
+
+        <section id="analyticsView" class="view">
+          <div id="analyticsKpis" class="kpi-grid"></div>
+          <div class="grid-2"><article class="panel"><p class="eyebrow">PAGES</p><h2>Top pages</h2><div id="pagesTable"></div></article><article class="panel"><p class="eyebrow">ACTIONS</p><h2>Conversion events</h2><div id="eventsTable"></div></article></div>
+          <article class="panel"><p class="eyebrow">TRAFFIC</p><h2>Referrers & campaigns</h2><div id="trafficTable"></div></article>
+        </section>
+
+        <section id="salesView" class="view">
+          <div id="salesKpis" class="kpi-grid"></div>
+          <div class="grid-2"><article class="panel"><p class="eyebrow">REVENUE</p><h2>Revenue by source</h2><div id="revenueSources"></div></article><article class="panel"><p class="eyebrow">SERVICES</p><h2>Revenue by service</h2><div id="revenueServices"></div></article></div>
+        </section>
+
+        <section id="healthView" class="view">
+          <div class="grid-2"><article class="panel"><p class="eyebrow">SYSTEM</p><h2>Connection</h2><div id="healthInfo"></div></article><article class="panel"><p class="eyebrow">TRACKING</p><h2>Event activity</h2><div id="trackingHealth"></div></article></div>
+          <article class="panel"><p class="eyebrow">SETUP</p><h2>What is being tracked</h2><div class="check-list"><span>✓ Page views & unique visitors</span><span>✓ Google / social / direct / referral sources</span><span>✓ UTM campaigns</span><span>✓ Phone & email clicks</span><span>✓ Service / CTA clicks</span><span>✓ Contact form starts and submissions</span><span>✓ Leads, quotes, won/lost jobs, revenue</span><span>✓ No raw visitor IP addresses stored</span></div></article>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="leadDialog">
+    <form id="leadForm" method="dialog">
+      <div class="dialog-head"><div><p class="eyebrow">LEAD</p><h2 id="leadDialogTitle">Edit lead</h2></div><button type="button" id="closeDialog" class="icon-btn" aria-label="Close">×</button></div>
+      <input type="hidden" id="leadId">
+      <div class="form-grid">
+        <label>Status<select id="editStatus"><option>New</option><option>Contacted</option><option>Quote Sent</option><option>Won</option><option>Lost</option></select></label>
+        <label>Service<input id="editService"></label>
+        <label>Quote amount<input id="editQuote" type="number" min="0" step="0.01"></label>
+        <label>Revenue<input id="editRevenue" type="number" min="0" step="0.01"></label>
+      </div>
+      <label>Notes<textarea id="editNotes" rows="5"></textarea></label>
+      <div class="dialog-actions"><button type="button" id="cancelLead" class="secondary">Cancel</button><button type="submit" class="primary">Save changes</button></div>
+    </form>
+  </dialog>
+
+  <script src="./config.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>

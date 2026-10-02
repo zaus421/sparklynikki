@@ -1,0 +1,82 @@
+(() => {
+  'use strict';
+  const cfg = window.SPARKLY_ADMIN_CONFIG || {};
+  const API = String(cfg.apiBase || '').replace(/\/$/, '');
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => [...document.querySelectorAll(s)];
+  const state = { token: sessionStorage.getItem('sn_admin_token') || '', dashboard: null, leads: [] };
+  const money = new Intl.NumberFormat('en-US',{style:'currency',currency:cfg.currency||'USD',maximumFractionDigits:0});
+  const num = new Intl.NumberFormat('en-US');
+  const safe = (v='') => String(v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+  async function api(path, opts={}) {
+    if (!API || API.includes('REPLACE-WITH')) throw new Error('API URL is not configured yet. Edit admin/config.js after deploying the Worker.');
+    const headers = {'Content-Type':'application/json', ...(opts.headers||{})};
+    if (state.token) headers.Authorization = `Bearer ${state.token}`;
+    const res = await fetch(`${API}${path}`, {...opts, headers, mode:'cors'});
+    if (res.status === 401 && path !== '/api/login') { signOut(false); throw new Error('Your session expired. Sign in again.'); }
+    if (!res.ok) { let msg=`Request failed (${res.status})`; try { const j=await res.json(); msg=j.error||msg; } catch{} throw new Error(msg); }
+    const type=res.headers.get('content-type')||'';
+    return type.includes('application/json') ? res.json() : res.text();
+  }
+
+  function daysQuery(){ const v=$('#dateRange').value; return `?days=${encodeURIComponent(v)}`; }
+  function pct(a,b){ return b ? `${((a/b)*100).toFixed(1)}%` : '0%'; }
+  function fmtDate(v){ if(!v) return '—'; const d=new Date(v.endsWith?.('Z')?v:v+'Z'); return Number.isNaN(d.getTime())?safe(v):d.toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}); }
+  function toast(msg){ const el=document.createElement('div'); el.className='toast'; el.textContent=msg; document.body.appendChild(el); setTimeout(()=>el.remove(),2600); }
+  function setLoading(on){ $('#content').classList.toggle('loading',on); }
+
+  async function login(e){ e.preventDefault(); $('#loginError').textContent=''; const username=$('#username').value.trim(), password=$('#password').value; try{ const r=await api('/api/login',{method:'POST',body:JSON.stringify({username,password})}); state.token=r.token; sessionStorage.setItem('sn_admin_token',r.token); $('#password').value=''; showApp(); await refreshAll(); }catch(err){ $('#loginError').textContent=err.message; } }
+  function signOut(call=true){ if(call && state.token) api('/api/logout',{method:'POST'}).catch(()=>{}); state.token=''; sessionStorage.removeItem('sn_admin_token'); $('#appView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); $('#password').value=''; }
+  async function verifySession(){ if(!state.token) return false; try{ await api('/api/session'); return true; }catch{return false;} }
+  function showApp(){ $('#loginView').classList.add('hidden'); $('#appView').classList.remove('hidden'); }
+
+  function kpi(label,value,sub=''){ return `<article class="kpi"><div class="label">${safe(label)}</div><div class="value">${safe(value)}</div><div class="sub">${safe(sub)}</div></article>`; }
+  function renderOverview(d){
+    const m=d.metrics||{};
+    $('#kpis').innerHTML=[
+      kpi('Visitors',num.format(m.visitors||0),'unique visitors'),
+      kpi('Leads',num.format(m.leads||0),`${pct(m.leads,m.visitors)} visitor → lead`),
+      kpi('Conversion',pct(m.customers,m.leads),'lead → customer'),
+      kpi('Quotes',num.format(m.quotes||0),money.format(m.quoteValue||0)+' quoted'),
+      kpi('Customers',num.format(m.customers||0),'won jobs'),
+      kpi('Revenue',money.format(m.revenue||0),`avg ${money.format(m.avgJob||0)} / won job`)
+    ].join('');
+    renderTrend(d.trend||[]);
+    const funnel=[['Visitors',m.visitors||0],['Service views',m.serviceViews||0],['Contact attempts',m.contactAttempts||0],['Leads',m.leads||0],['Quotes',m.quotes||0],['Customers',m.customers||0]];
+    const max=Math.max(1,...funnel.map(x=>x[1]));
+    $('#funnelChart').innerHTML=funnel.map(([n,v])=>`<div class="funnel-row"><span>${safe(n)}</span><div class="funnel-bar"><div class="funnel-fill" style="width:${Math.max(2,(v/max)*100)}%"></div></div><span class="funnel-value">${num.format(v)}</span></div>`).join('');
+    renderMetricList('#sourceBreakdown',d.sources||[],x=>x.name,x=>`${num.format(x.leads||0)} leads · ${money.format(x.revenue||0)}`,x=>x.leads||0);
+    renderMetricList('#serviceBreakdown',d.services||[],x=>x.name,x=>`${num.format(x.leads||0)} leads · ${money.format(x.revenue||0)}`,x=>x.revenue||0);
+    $('#recentLeads').innerHTML=(d.recentLeads||[]).length ? d.recentLeads.map(l=>`<div class="lead-card"><div class="lead-name">${safe(l.name||'Unknown')}</div><div class="lead-meta">${safe(l.service||'General inquiry')} · ${safe(l.source||'Direct')} · ${fmtDate(l.created_at)}</div></div>`).join('') : '<div class="empty">No leads yet.</div>';
+  }
+  function renderTrend(rows){
+    const el=$('#trendChart'); if(!rows.length){el.innerHTML='<div class="empty">No traffic yet.</div>';return;}
+    const W=680,H=235,pad=28,max=Math.max(1,...rows.flatMap(r=>[r.visitors||0,r.leads||0]));
+    const x=i=>pad+(i*Math.max(1,(W-pad*2)/(rows.length-1||1))); const y=v=>H-pad-(v/max)*(H-pad*2);
+    const path=key=>rows.map((r,i)=>`${i?'L':'M'} ${x(i).toFixed(1)} ${y(r[key]||0).toFixed(1)}`).join(' ');
+    const grid=[0,.25,.5,.75,1].map(t=>`<line class="grid-line" x1="${pad}" x2="${W-pad}" y1="${y(max*t)}" y2="${y(max*t)}"/><text class="axis-label" x="0" y="${y(max*t)+3}">${Math.round(max*t)}</text>`).join('');
+    const labels=rows.filter((_,i)=>i===0||i===rows.length-1||i===Math.floor(rows.length/2)).map((r)=>{const i=rows.indexOf(r);return `<text class="axis-label" x="${x(i)-12}" y="${H}">${safe(String(r.date).slice(5))}</text>`}).join('');
+    el.innerHTML=`<svg viewBox="0 0 ${W} ${H}">${grid}<path class="line-visitors" d="${path('visitors')}"/><path class="line-leads" d="${path('leads')}"/>${labels}</svg><div class="legend"><span><i class="v"></i>Visitors</span><span><i class="l"></i>Leads</span></div>`;
+  }
+  function renderMetricList(sel,rows,name,sub,val){ const el=$(sel); if(!rows.length){el.innerHTML='<div class="empty">No data yet.</div>';return;} const max=Math.max(1,...rows.map(val)); el.innerHTML=`<div class="metric-list">${rows.slice(0,7).map(r=>`<div class="metric-row"><div class="metric-main"><div class="metric-name">${safe(name(r)||'Unknown')}</div><div class="metric-sub">${safe(sub(r))}</div><div class="mini-bar"><span style="width:${Math.max(2,val(r)/max*100)}%"></span></div></div><div class="metric-amount">${safe(String(val(r)))}</div></div>`).join('')}</div>`; }
+
+  function renderAnalytics(d){ const m=d.metrics||{}; $('#analyticsKpis').innerHTML=[kpi('Page views',num.format(m.pageViews||0),'all tracked pages'),kpi('Visitors',num.format(m.visitors||0),'anonymous uniques'),kpi('Phone clicks',num.format(m.phoneClicks||0),'tap-to-call'),kpi('Email clicks',num.format(m.emailClicks||0),'email intent'),kpi('Form starts',num.format(m.formStarts||0),'started inquiry'),kpi('Form submits',num.format(m.formSubmits||0),`${pct(m.formSubmits,m.formStarts)} completion`)].join(''); simpleTable('#pagesTable',d.pages||[],[['Page',r=>r.name],['Views',r=>num.format(r.count||0)]]); simpleTable('#eventsTable',d.events||[],[['Event',r=>r.name],['Count',r=>num.format(r.count||0)]]); simpleTable('#trafficTable',d.traffic||[],[['Source / campaign',r=>r.name],['Visitors',r=>num.format(r.visitors||0)],['Leads',r=>num.format(r.leads||0)],['Revenue',r=>money.format(r.revenue||0)]]); }
+  function renderSales(d){ const m=d.metrics||{}; $('#salesKpis').innerHTML=[kpi('Won revenue',money.format(m.revenue||0),'closed business'),kpi('Quoted value',money.format(m.quoteValue||0),'all quotes'),kpi('Close rate',pct(m.customers,m.leads),'won / total leads'),kpi('Avg job',money.format(m.avgJob||0),'won revenue / jobs'),kpi('Won jobs',num.format(m.customers||0),'customers'),kpi('Open pipeline',money.format(m.openPipeline||0),'open quoted value')].join(''); renderMetricList('#revenueSources',d.sources||[],x=>x.name,x=>`${x.customers||0} won jobs`,x=>Number(x.revenue)||0); renderMetricList('#revenueServices',d.services||[],x=>x.name,x=>`${x.customers||0} won jobs`,x=>Number(x.revenue)||0); }
+  function simpleTable(sel,rows,cols){ const el=$(sel); if(!rows.length){el.innerHTML='<div class="empty">No data yet.</div>';return;} el.innerHTML=`<div class="data-list">${rows.slice(0,20).map(r=>`<div class="data-row"><div>${safe(cols[0][1](r)||'Unknown')}</div><div>${cols.slice(1).map(c=>`<span style="margin-left:14px">${safe(c[0])}: <strong>${safe(c[1](r))}</strong></span>`).join('')}</div></div>`).join('')}</div>`; }
+
+  async function loadLeads(){ const qs=new URLSearchParams(); if($('#leadSearch').value.trim()) qs.set('q',$('#leadSearch').value.trim()); if($('#leadStatus').value) qs.set('status',$('#leadStatus').value); const r=await api(`/api/leads?${qs}`); state.leads=r.leads||[]; $('#leadsTable').innerHTML=state.leads.length?state.leads.map(l=>`<tr><td class="table-person"><strong>${safe(l.name||'Unknown')}</strong><span>${safe(l.email||l.phone||'No contact')}</span></td><td>${safe(l.service||'General')}</td><td>${safe(l.source||'Direct')}</td><td><span class="status-pill status-${safe(String(l.status||'New').replaceAll(' ','-'))}">${safe(l.status||'New')}</span></td><td>${money.format(Number(l.quote_amount)||0)}</td><td>${money.format(Number(l.revenue)||0)}</td><td>${fmtDate(l.created_at)}</td><td><button class="row-btn" data-edit="${l.id}">Edit</button></td></tr>`).join(''):'<tr><td colspan="8"><div class="empty">No leads match this filter.</div></td></tr>'; }
+  function openLead(id){ const l=state.leads.find(x=>String(x.id)===String(id)); if(!l)return; $('#leadId').value=l.id; $('#leadDialogTitle').textContent=l.name||'Edit lead'; $('#editStatus').value=l.status||'New'; $('#editService').value=l.service||''; $('#editQuote').value=l.quote_amount||''; $('#editRevenue').value=l.revenue||''; $('#editNotes').value=l.notes||''; $('#leadDialog').showModal(); }
+  async function saveLead(e){ e.preventDefault(); const id=$('#leadId').value; const body={status:$('#editStatus').value,service:$('#editService').value.trim(),quote_amount:Number($('#editQuote').value)||0,revenue:Number($('#editRevenue').value)||0,notes:$('#editNotes').value.trim()}; await api(`/api/leads/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify(body)}); $('#leadDialog').close(); toast('Lead updated'); await refreshAll(); }
+  async function exportCsv(){ const res=await fetch(`${API}/api/export/leads.csv`,{headers:{Authorization:`Bearer ${state.token}`}}); if(!res.ok) return toast('Export failed'); const blob=await res.blob(),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='sparkly-nikki-leads.csv';document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(u); }
+
+  async function refreshAll(){ setLoading(true); try{ const d=await api(`/api/dashboard${daysQuery()}`); state.dashboard=d; renderOverview(d); renderAnalytics(d); renderSales(d); await loadLeads(); await loadHealth(); setApiStatus(true); }catch(err){ setApiStatus(false); toast(err.message); }finally{setLoading(false);} }
+  async function loadHealth(){ try{ const h=await api('/api/health'); $('#healthInfo').innerHTML=`<div class="data-list"><div class="data-row"><span>API</span><strong>${safe(h.status)}</strong></div><div class="data-row"><span>Database</span><strong>${safe(h.database)}</strong></div><div class="data-row"><span>Server time</span><strong>${safe(h.time)}</strong></div></div>`; $('#trackingHealth').innerHTML=`<div class="data-list"><div class="data-row"><span>Last event</span><strong>${safe(h.lastEvent||'No events yet')}</strong></div><div class="data-row"><span>Events (24h)</span><strong>${num.format(h.events24h||0)}</strong></div><div class="data-row"><span>Leads (24h)</span><strong>${num.format(h.leads24h||0)}</strong></div></div>`;}catch(err){$('#healthInfo').innerHTML=`<div class="error-box">${safe(err.message)}</div>`;} }
+  function setApiStatus(ok){ const d=$('#apiStatus .status-dot'); d.className='status-dot '+(ok?'ok':'bad'); $('#apiStatus span:last-child').textContent=ok?'API connected':'API unavailable'; }
+
+  function switchView(name){ $$('.view').forEach(v=>v.classList.toggle('active-view',v.id===`${name}View`)); $$('#nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name)); const map={overview:['BUSINESS OVERVIEW','Dashboard'],leads:['CRM','Leads & customers'],analytics:['WEBSITE','Analytics'],sales:['PIPELINE','Sales & revenue'],health:['SYSTEM','Site health']}; $('#sectionEyebrow').textContent=map[name][0]; $('#sectionTitle').textContent=map[name][1]; }
+
+  $('#loginForm').addEventListener('submit',login); $('#logoutBtn').addEventListener('click',()=>signOut()); $('#refreshBtn').addEventListener('click',refreshAll); $('#dateRange').addEventListener('change',refreshAll); $('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-view]');if(b)switchView(b.dataset.view)}); document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g)switchView(g.dataset.go); const b=e.target.closest('[data-edit]');if(b)openLead(b.dataset.edit)}); $('#leadForm').addEventListener('submit',saveLead); $('#closeDialog').addEventListener('click',()=>$('#leadDialog').close()); $('#cancelLead').addEventListener('click',()=>$('#leadDialog').close()); $('#leadSearch').addEventListener('input',()=>{clearTimeout(window.__ls);window.__ls=setTimeout(loadLeads,250)}); $('#leadStatus').addEventListener('change',loadLeads); $('#exportBtn').addEventListener('click',exportCsv);
+
+  (async()=>{ if(await verifySession()){showApp();await refreshAll();} })();
+})();
