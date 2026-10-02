@@ -2,12 +2,11 @@
   const cfg = window.SITE_CONFIG || {};
   const businessName = cfg.businessName || "Nikki's Sparkly Solutions";
   const ownerName = cfg.ownerName || "Nikki";
-  const destinationEmail = cfg.destinationEmail || "imdirtnap@gmail.com";
+  const destinationEmail = cfg.destinationEmail || cfg.publicEmail || "nikkisparklysolutions@gmail.com";
   const publicEmail = cfg.publicEmail || "";
   const phone = cfg.phone || "";
   const city = cfg.city || "Rochester";
   const state = cfg.state || "MN";
-  const country = cfg.country || "US";
   const cityState = `${city}, ${state}`;
   const serviceArea = cfg.serviceAreaText || `${city}, ${state} and nearby communities`;
   const replyTime = cfg.replyTimeText || "usually within one business day";
@@ -20,10 +19,6 @@
   document.querySelectorAll('[data-city-state]').forEach(el => el.textContent = cityState);
   document.querySelectorAll('[data-service-area]').forEach(el => el.textContent = serviceArea);
   document.querySelectorAll('[data-reply-time]').forEach(el => el.textContent = replyTime);
-  document.querySelectorAll('.brand-mark').forEach(el => {
-    const initials = businessName.replace(/[^a-zA-Z0-9 ]/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(word => word[0].toUpperCase()).join('');
-    el.textContent = initials || 'NSS';
-  });
 
   const page = document.body.dataset.page || 'home';
   const seo = {
@@ -138,7 +133,11 @@
       if (!window.google?.maps) {
         await new Promise((resolve, reject) => {
           const existing = document.querySelector('script[data-google-maps-loader]');
-          if (existing) { existing.addEventListener('load', resolve, { once: true }); existing.addEventListener('error', reject, { once: true }); return; }
+          if (existing) {
+            existing.addEventListener('load', resolve, { once: true });
+            existing.addEventListener('error', reject, { once: true });
+            return;
+          }
           const loader = document.createElement('script');
           loader.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&v=weekly&loading=async`;
           loader.async = true;
@@ -260,7 +259,10 @@
     event.preventDefault();
     message.className = 'form-message';
     message.textContent = '';
-    if (!form.checkValidity()) { form.reportValidity(); return; }
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
     submitButton.disabled = true;
     submitButton.setAttribute('aria-busy', 'true');
     submitButton.textContent = 'Sending…';
