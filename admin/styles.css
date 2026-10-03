@@ -144,3 +144,6 @@
 #jobsPanel .jobs-history-controls button { min-height: 44px; max-width: 100%; white-space: normal; }
 #jobsPanel .jobs-history-controls button:disabled { opacity: .5; cursor: default; }
 #jobsPageInfo, #jobsHistoryLimit { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+
+#businessSummaryKpis .kpi { min-width: 0; }
+#businessSummaryKpis .value { overflow-wrap: anywhere; }

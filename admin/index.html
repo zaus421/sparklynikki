@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://admin.bells-pvm.workers.dev; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
   <title>Sparkly Nikki · Business Dashboard</title>
-  <link rel="stylesheet" href="./styles.css?v=jobs-history-1">
+  <link rel="stylesheet" href="./styles.css?v=business-summary-1">
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -58,6 +58,11 @@
 
       <main id="content">
         <section id="overviewView" class="view active-view">
+          <section aria-labelledby="businessSummaryHeading">
+            <h2 id="businessSummaryHeading">Business summary</h2>
+            <p>Revenue uses job dates in Chicago time. These totals are independent of the date filter.</p>
+            <div id="businessSummaryKpis" class="kpi-grid"></div>
+          </section>
           <div id="kpis" class="kpi-grid"></div>
           <div class="grid-2">
             <article class="panel"><div class="panel-head"><div><p class="eyebrow">TREND</p><h2>Leads & visitors</h2></div></div><div id="trendChart" class="chart"></div></article>
@@ -150,6 +155,6 @@
   </dialog>
 
   <script src="./config.js"></script>
-  <script src="./app.js?v=jobs-history-1"></script>
+  <script src="./app.js?v=business-summary-1"></script>
 </body>
 </html>

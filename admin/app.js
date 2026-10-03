@@ -135,6 +135,37 @@
     return `<article class="kpi"><div class="label">${safe(label)}</div><div class="value">${safe(value)}</div><div class="sub">${safe(sub)}</div></article>`;
   }
   function renderOverview(d) {
+    const summary = d.businessSummary;
+    $('#businessSummaryKpis').innerHTML = summary
+      ? [
+          ['This month revenue', summary.monthRevenue, 'Month to date'],
+          [
+            'Last 30 days revenue',
+            summary.last30Revenue,
+            'Today and previous 29 days'
+          ],
+          ['Year-to-date revenue', summary.yearRevenue, 'January 1 to today'],
+          [
+            'All-time revenue',
+            summary.allTimeRevenue,
+            'All recorded collections'
+          ],
+          [
+            'Outstanding / unpaid',
+            summary.outstanding,
+            'All recorded unpaid balances'
+          ],
+          [
+            'Average completed job',
+            summary.averageCompleted,
+            'Paid / won jobs · all time'
+          ]
+        ]
+          .map(([label, value, detail]) =>
+            kpi(label, money.format(value), detail)
+          )
+          .join('')
+      : '<p class="muted">Business summary unavailable. Please refresh.</p>';
     const m = d.metrics || {};
     $('#kpis').innerHTML = [
       kpi('Visitors', num.format(m.visitors || 0), 'unique visitors'),
