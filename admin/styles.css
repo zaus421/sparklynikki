@@ -147,3 +147,59 @@
 
 #businessSummaryKpis .kpi { min-width: 0; }
 #businessSummaryKpis .value { overflow-wrap: anywhere; }
+
+@media (max-width: 700px) {
+  .sidebar nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+  .sidebar nav button { min-height: 44px; white-space: normal; }
+  .topbar > div, .panel, .kpi { min-width: 0; }
+  .kpi .value, .data-row strong, .lead-meta { overflow-wrap: anywhere; }
+  .topbar h1 { overflow-wrap: anywhere; }
+  #leadsView .toolbar input, #leadsView .toolbar select { min-width: 0; font-size: 16px; min-height: 44px; }
+  #leadsView .toolbar button { min-height: 44px; }
+  #leadsView .table-wrap { overflow: visible; }
+  #leadsView table, #leadsTable { display: block; width: 100%; }
+  #leadsView thead {
+    position: absolute; width: 1px; height: 1px; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
+  #leadsTable { padding: 12px; }
+  #leadsTable tr {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 12px; padding: 14px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+  }
+  #leadsTable tr + tr { margin-top: 12px; }
+  #leadsTable td {
+    display: block; min-width: 0; padding: 0; border: 0;
+    white-space: normal; overflow-wrap: anywhere; font-size: 14px; line-height: 1.4;
+  }
+  #leadsTable td::before {
+    display: block; margin-bottom: 4px; color: var(--muted); font-size: 11px; font-weight: 700;
+  }
+  #leadsTable td:nth-child(1), #leadsTable td:nth-child(2), #leadsTable td:nth-child(8), #leadsTable td[colspan] { grid-column: 1 / -1; }
+  #leadsTable .table-person strong { font-size: 16px; }
+  #leadsTable .table-person span { display: block; margin-top: 4px; font-size: 13px; }
+  #leadsTable td:nth-child(2)::before { content: 'Service'; }
+  #leadsTable td:nth-child(3)::before { content: 'Source'; }
+  #leadsTable td:nth-child(4)::before { content: 'Status'; }
+  #leadsTable td:nth-child(5)::before { content: 'Quote'; }
+  #leadsTable td:nth-child(6)::before { content: 'Revenue'; }
+  #leadsTable td:nth-child(7)::before { content: 'Received'; }
+  #leadsTable .row-btn { width: 100%; min-height: 44px; font-weight: 700; }
+  #leadsTable .empty { padding: 0; }
+  #leadDialog { max-height: calc(100dvh - 24px); overflow-y: auto; }
+  #leadForm { padding: 0 16px; }
+  #leadDialog .dialog-head {
+    position: sticky; top: 0; z-index: 1; align-items: center;
+    padding: 12px 0; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  #leadDialogTitle { margin: 0; font-size: 20px; }
+  #closeDialog { min-width: 44px; min-height: 44px; }
+  #leadDialog input, #leadDialog select, #leadDialog textarea { min-width: 0; font-size: 16px; min-height: 44px; }
+  #leadDialog textarea { max-width: 100%; }
+  #leadDialog .dialog-actions {
+    position: sticky; bottom: 0; display: grid; grid-template-columns: 1fr 2fr;
+    padding: 12px 0; background: var(--panel); border-top: 1px solid var(--line);
+  }
+  #leadDialog .dialog-actions button { min-width: 0; min-height: 48px; }
+}
