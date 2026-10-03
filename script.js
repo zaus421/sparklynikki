@@ -254,6 +254,48 @@
   const message = document.getElementById('form-message');
   if (!form) return;
 
+  async function saveInquiry(data) {
+    const value = key => String(data.get(key) || '').trim();
+    if (value('_honey')) return true;
+    const api = document.querySelector('script[data-api]')?.dataset.api;
+    if (!api) return false;
+    const uuid = () => crypto.randomUUID ? crypto.randomUUID() : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    let visitor = uuid(), attribution = {}, sourcePage = '';
+    try {
+      visitor = localStorage.getItem('sn_visitor') || visitor;
+      attribution = JSON.parse(sessionStorage.getItem('sn_attribution') || '{}') || {};
+      sourcePage = JSON.parse(sessionStorage.getItem('sn_service_page') || '""');
+    } catch (_) {}
+    const campaign = new URLSearchParams(location.search);
+    for (const key of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']) {
+      if (campaign.get(key)) attribution[key] = campaign.get(key);
+    }
+    if (!attribution.referrer) {
+      try { const ref = new URL(document.referrer); if (!['sparklynikki.com', 'www.sparklynikki.com'].includes(ref.hostname)) attribution.referrer = ref.origin + ref.pathname; } catch (_) {}
+    }
+    const details = { source_page: sourcePage };
+    for (const key of ['zip_code', 'bedrooms', 'bathrooms', 'square_feet', 'frequency', 'preferred_timing', 'pets', 'inside_fridge', 'inside_oven', 'interior_windows']) details[key] = value(key);
+    const body = JSON.stringify({
+      ...attribution, event: 'form_submit', event_id: uuid(), visitor_id: visitor,
+      page: location.pathname, landing_page: attribution.landing_page || location.pathname, form: form.id,
+      lead: { name: value('name'), email: value('email'), phone: value('phone'), service: value('cleaning_type'), message: value('notes'), details }
+    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(api.replace(/\/$/, '') + '/api/event', {
+          method: 'POST', mode: 'cors', credentials: 'omit', keepalive: true,
+          headers: { 'Content-Type': 'application/json' }, body, signal: controller.signal
+        });
+        if (response.ok) return true;
+        if (response.status < 500 && response.status !== 429) return false;
+      } catch (_) {} finally { clearTimeout(timeout); }
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+    }
+    return false;
+  }
+
   const endpoint = `https://formsubmit.co/ajax/${encodeURIComponent(destinationEmail)}`;
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -275,9 +317,11 @@
       let result = null;
       try { result = await response.json(); } catch (_) {}
       if (!response.ok || result?.success === false) throw new Error('Submission failed');
+      const crmSaved = await saveInquiry(data).catch(() => false);
       form.reset();
       message.className = 'form-message success';
       message.textContent = `Thanks! Your quote request was sent to ${ownerName}. You should hear back ${replyTime}.`;
+      if (!crmSaved) message.textContent += ' Your email was sent, but the dashboard copy could not be saved. Please do not resubmit.';
     } catch (error) {
       message.className = 'form-message error';
       message.textContent = 'That didn’t go through. Please try again in a moment.';

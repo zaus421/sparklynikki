@@ -35,12 +35,6 @@
     }),true);
     const seen=new WeakSet();
     document.addEventListener('input',safely(e=>{const f=e.target.form;if(f?.id==='quote-form'&&!seen.has(f)){seen.add(f);send('form_start',{form:f.id})}}),true);
-    document.addEventListener('submit',safely(e=>{
-      const f=e.target;if(!(f instanceof HTMLFormElement)||f.id!=='quote-form'||!f.checkValidity()||f.querySelector('[type="submit"]')?.disabled)return;
-      const fd=new FormData(f);if(fd.get('_honey'))return;
-      const pick=(...keys)=>{for(const key of keys){const v=fd.get(key);if(typeof v==='string'&&v.trim())return v.trim().slice(0,2000)}return ''};
-      const details={source_page:servicePage};for(const key of ['zip_code','bedrooms','bathrooms','square_feet','frequency','preferred_timing','pets','inside_fridge','inside_oven','interior_windows'])details[key]=pick(key);
-      send('form_submit',{form:f.id,lead:{name:pick('name','full_name'),email:pick('email','email_address'),phone:pick('phone','telephone'),service:pick('cleaning_type','service','service_type')||servicePages[servicePage]||'',message:pick('notes','message','details'),details}});
-    }),true);
+
   }catch{}
 })();
