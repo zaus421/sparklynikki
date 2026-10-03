@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://admin.bells-pvm.workers.dev; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
   <title>Sparkly Nikki · Business Dashboard</title>
-  <link rel="stylesheet" href="./styles.css?v=audit-1">
+  <link rel="stylesheet" href="./styles.css?v=job-modal-1">
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -115,9 +115,10 @@
     </form>
   </dialog>
 
-  <dialog id="jobDialog">
+  <dialog id="jobDialog" aria-labelledby="jobTitle">
     <form id="jobForm" method="dialog">
       <div class="dialog-head"><h2 id="jobTitle">Add job / payment</h2><button type="button" id="closeJob" class="icon-btn" aria-label="Close job">×</button></div>
+      <div class="job-dialog-body">
       <p class="muted">Record a completed job. Paid marks a linked customer as won. Linked jobs replace that customer's CRM money totals.</p>
       <input id="jobId" type="hidden">
       <div class="form-grid">
@@ -133,6 +134,7 @@
       </div>
       <label>Notes (optional)<textarea id="jobNotes" rows="2" maxlength="4000"></textarea></label>
       <p id="jobError" class="form-error" role="alert"></p>
+      </div>
       <div class="dialog-actions"><button id="cancelJob" type="button" class="secondary">Cancel</button><button id="saveJob" type="submit" class="primary">Save job</button></div>
     </form>
   </dialog>
