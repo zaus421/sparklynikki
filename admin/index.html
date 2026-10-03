@@ -8,6 +8,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://admin.bells-pvm.workers.dev; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
   <title>Sparkly Nikki · Business Dashboard</title>
   <link rel="stylesheet" href="./styles.css?v=mobile-crm-1">
+  <link rel="stylesheet" href="./operations.css?v=operations-1">
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -15,7 +16,7 @@
       <div class="brand-mark" aria-hidden="true">✦</div>
       <p class="eyebrow">SPARKLY NIKKI</p>
       <h1 id="loginTitle">Business dashboard</h1>
-      <p class="muted">Private analytics, leads, sales, and site health.</p>
+      <p class="muted">Private analytics, leads, sales, operations, and site health.</p>
       <form id="loginForm" autocomplete="on">
         <label>Username<input id="username" name="username" autocomplete="username" required></label>
         <label>Password<input id="password" name="password" type="password" autocomplete="current-password" required></label>
@@ -31,9 +32,11 @@
       <nav id="nav">
         <button data-view="overview" class="active">Overview</button>
         <button data-view="leads">Leads & CRM</button>
+        <button id="operationsNav" type="button">Operations</button>
         <button data-view="analytics">Analytics</button>
         <button data-view="sales">Sales</button>
         <button data-view="health">Site health</button>
+        <button id="testNav" type="button">Test</button>
       </nav>
       <div class="side-footer">
         <div id="apiStatus" class="status-dot-row"><span class="status-dot"></span><span>Checking API</span></div>
@@ -77,6 +80,71 @@
           <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Lead</th><th>Service</th><th>Source</th><th>Status</th><th>Quote</th><th>Revenue</th><th>Received</th><th></th></tr></thead><tbody id="leadsTable"></tbody></table></div></article>
         </section>
 
+        <section id="operationsView" class="view">
+          <div class="operations-tabs" role="tablist" aria-label="Operations sections">
+            <button type="button" class="active" data-ops-tab="schedule">Scheduling</button>
+            <button type="button" data-ops-tab="customers">Customers</button>
+            <button type="button" data-ops-tab="reminders">Reminders</button>
+          </div>
+
+          <div id="operationsStatus" class="operations-status" hidden></div>
+
+          <section id="scheduleOps" class="ops-pane active">
+            <div class="operations-summary" id="scheduleSummary"></div>
+            <div class="operations-head">
+              <div><p class="eyebrow">SCHEDULING</p><h2>Cleaning schedule</h2><p class="muted">Scheduling only. Payments and revenue stay in Sales.</p></div>
+              <button id="scheduleJobBtn" class="primary ops-primary" type="button">Schedule job</button>
+            </div>
+            <div class="ops-filter-row">
+              <select id="scheduleFilter" aria-label="Filter scheduled jobs">
+                <option value="upcoming">Upcoming</option>
+                <option value="today">Today</option>
+                <option value="all">All</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+            <div id="scheduleList" class="ops-list"></div>
+          </section>
+
+          <section id="customersOps" class="ops-pane">
+            <div class="operations-head">
+              <div><p class="eyebrow">CUSTOMER DATABASE</p><h2>Customers & inquiries</h2><p class="muted">This is the same CRM data already used by Leads & CRM.</p></div>
+            </div>
+            <div class="ops-filter-row ops-customer-filter">
+              <input id="opsCustomerSearch" type="search" placeholder="Search name, phone, email, service…" aria-label="Search customers">
+              <select id="opsCustomerStatus" aria-label="Filter customers">
+                <option value="">All statuses</option>
+                <option value="New">New inquiry</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Quote Sent">Quote sent</option>
+                <option value="Won">Booked / customer</option>
+                <option value="Lost">Not booked</option>
+              </select>
+            </div>
+            <div id="opsCustomerList" class="ops-list"></div>
+          </section>
+
+          <section id="remindersOps" class="ops-pane">
+            <div class="operations-summary" id="reminderSummary"></div>
+            <div class="operations-head">
+              <div><p class="eyebrow">REMINDERS</p><h2>Follow-ups & reminders</h2><p class="muted">Keep calls, texts, quotes, and other follow-ups in one place.</p></div>
+              <button id="addReminderBtn" class="primary ops-primary" type="button">Add reminder</button>
+            </div>
+            <div class="ops-filter-row">
+              <select id="reminderFilter" aria-label="Filter reminders">
+                <option value="open">Open</option>
+                <option value="today">Due today</option>
+                <option value="overdue">Overdue</option>
+                <option value="completed">Completed</option>
+                <option value="all">All</option>
+              </select>
+              <button id="appleReminderSetupBtn" class="secondary" type="button">iPhone Reminders setup</button>
+            </div>
+            <div id="reminderList" class="ops-list"></div>
+          </section>
+        </section>
+
         <section id="analyticsView" class="view">
           <div id="analyticsKpis" class="kpi-grid"></div>
           <div class="grid-2"><article class="panel"><p class="eyebrow">PAGES</p><h2>Top pages</h2><div id="pagesTable"></div></article><article class="panel"><p class="eyebrow">ACTIONS</p><h2>Conversion events</h2><div id="eventsTable"></div></article></div>
@@ -103,6 +171,26 @@
         <section id="healthView" class="view">
           <div class="grid-2"><article class="panel"><p class="eyebrow">SYSTEM</p><h2>Connection</h2><div id="healthInfo"></div></article><article class="panel"><p class="eyebrow">TRACKING</p><h2>Event activity</h2><div id="trackingHealth"></div></article></div>
           <article class="panel"><p class="eyebrow">SETUP</p><h2>What is being tracked</h2><div class="check-list"><span>✓ Page views & unique visitors</span><span>✓ Google / social / direct / referral sources</span><span>✓ UTM campaigns</span><span>✓ Phone & email clicks</span><span>✓ Service / CTA clicks</span><span>✓ Contact form starts and submissions</span><span>✓ Leads, quotes, won/lost jobs, revenue</span><span>✓ No raw visitor IP addresses stored</span></div></article>
+        </section>
+
+        <section id="testView" class="view">
+          <article class="panel test-panel">
+            <div class="panel-head"><div><p class="eyebrow">TEMPORARY</p><h2>Test Operations</h2></div><span id="opsTestCount" class="test-count">0 test records</span></div>
+            <p class="muted">Test records stay local to this browser and never write to the production CRM or Worker.</p>
+            <div class="test-actions">
+              <button class="secondary" type="button" id="addOpsTestCustomer">Add test customer</button>
+              <button class="secondary" type="button" id="addOpsTestSchedule">Add scheduled test job</button>
+              <button class="secondary" type="button" id="addOpsTestReminder">Add test reminder</button>
+              <button class="primary ops-primary" type="button" id="addOpsFullTestSet">Add full test set</button>
+              <button class="secondary" type="button" id="clearOpsTestData">Clear test data</button>
+            </div>
+          </article>
+          <article class="panel test-danger">
+            <p class="eyebrow">DONE TESTING</p>
+            <h2>Self destruct Test mode</h2>
+            <p class="muted">Deletes only local Test-panel data and permanently hides this temporary Test section in this browser.</p>
+            <button class="danger-button" type="button" id="destroyOpsTestMode">Delete test data & remove Test section</button>
+          </article>
         </section>
       </main>
     </div>
@@ -147,7 +235,64 @@
     </form>
   </dialog>
 
+  <dialog id="scheduleDialog" class="ops-dialog" aria-labelledby="scheduleDialogTitle">
+    <form id="scheduleForm">
+      <div class="dialog-head"><div><p class="eyebrow">SCHEDULING</p><h2 id="scheduleDialogTitle">Schedule job</h2></div><button type="button" class="icon-btn" data-close-ops="schedule" aria-label="Close">×</button></div>
+      <input id="scheduleId" type="hidden">
+      <div class="ops-dialog-body">
+        <div class="form-grid">
+          <label>Customer<select id="scheduleLeadId" required><option value="">Select customer</option></select></label>
+          <label>Address<input id="scheduleAddress" maxlength="240" autocomplete="street-address"></label>
+          <label>Service<select id="scheduleService" required><option>Recurring cleaning</option><option>One-time cleaning</option><option>Deep cleaning</option><option>Move-in / move-out</option><option>Other</option></select></label>
+          <label>Status<select id="scheduleStatus"><option>Scheduled</option><option>In Progress</option><option>Completed</option><option>Cancelled</option></select></label>
+          <label>Date<input id="scheduleDate" type="date" required></label>
+          <label>Start time<input id="scheduleStart" type="time"></label>
+          <label>End time<input id="scheduleEnd" type="time"></label>
+        </div>
+        <label id="scheduleServiceNoteWrap" hidden>Other service note (optional)<input id="scheduleServiceNote" maxlength="180"></label>
+        <label>Notes<textarea id="scheduleNotes" rows="4" maxlength="2000"></textarea></label>
+        <p id="scheduleError" class="form-error" role="alert"></p>
+      </div>
+      <div class="dialog-actions"><button type="button" class="secondary" data-close-ops="schedule">Cancel</button><button type="submit" class="primary ops-primary">Save schedule</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="reminderOpsDialog" class="ops-dialog" aria-labelledby="reminderOpsDialogTitle">
+    <form id="reminderOpsForm">
+      <div class="dialog-head"><div><p class="eyebrow">REMINDER</p><h2 id="reminderOpsDialogTitle">Add reminder</h2></div><button type="button" class="icon-btn" data-close-ops="reminder" aria-label="Close">×</button></div>
+      <input id="reminderOpsId" type="hidden">
+      <div class="ops-dialog-body">
+        <label>What needs to happen?<input id="reminderOpsTitle" maxlength="180" required></label>
+        <div class="form-grid">
+          <label>Customer<select id="reminderOpsLeadId"><option value="">No linked customer</option></select></label>
+          <label>Due date<input id="reminderOpsDate" type="date" required></label>
+          <label>Due time / alert<input id="reminderOpsTime" type="time"></label>
+        </div>
+        <label>Notes<textarea id="reminderOpsNotes" rows="4" maxlength="2000"></textarea></label>
+        <p class="muted ops-form-note">On iPhone, the Reminders shortcut uses this due date/time as the notification time.</p>
+        <p id="reminderOpsError" class="form-error" role="alert"></p>
+      </div>
+      <div class="dialog-actions"><button type="button" class="secondary" data-close-ops="reminder">Cancel</button><button type="submit" class="primary ops-primary">Save reminder</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="appleReminderSetupDialog" class="ops-dialog" aria-labelledby="appleReminderSetupTitle">
+    <div class="dialog-head"><div><p class="eyebrow">IPHONE</p><h2 id="appleReminderSetupTitle">Apple Reminders setup</h2></div><button type="button" class="icon-btn" data-close-ops="apple-setup" aria-label="Close">×</button></div>
+    <div class="ops-dialog-body apple-setup-copy">
+      <p>This is a one-time iPhone setup. Apple does not let a normal website directly create a Reminders task with an alert.</p>
+      <ol>
+        <li>Open Shortcuts and create a shortcut named <strong>Nikki Reminder</strong>.</li>
+        <li>Have it accept text input containing JSON.</li>
+        <li>Read the JSON values <strong>title</strong>, <strong>notes</strong>, <strong>due_date</strong>, and <strong>due_time</strong>.</li>
+        <li>Use the Reminders action to add a reminder with that title, notes, and due date/time.</li>
+      </ol>
+      <p>After that, the <strong>iPhone Reminder</strong> button in Operations sends each saved reminder straight to that shortcut.</p>
+      <div class="apple-setup-actions"><a class="primary ops-link-button" href="shortcuts://create-shortcut">Open Shortcuts</a><button id="markAppleShortcutReady" type="button" class="secondary">I set it up</button></div>
+    </div>
+  </dialog>
+
   <script src="./config.js"></script>
   <script src="./app.js?v=contact-preferences-1"></script>
+  <script src="./operations.js?v=operations-1"></script>
 </body>
 </html>
