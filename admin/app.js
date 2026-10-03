@@ -423,6 +423,10 @@
     setLoading(true);
     try {
       const d = await api(`/api/dashboard${daysQuery()}`);
+      if (jobsHistory) {
+        const history = await api('/api/jobs?days=all');
+        if (jobsHistory) d.jobs = history.jobs;
+      }
       state.dashboard = d;
       renderOverview(d);
       renderAnalytics(d);
@@ -506,10 +510,38 @@
 
   let ledgerRows = [],
     customerOptions = [];
+  let jobsHistory = false,
+    jobsPage = 0;
   function renderJobs(rows) {
-    ledgerRows = rows || [];
-    $('#jobsTable').innerHTML = ledgerRows.length
-      ? ledgerRows
+    ledgerRows = [...(rows || [])].sort(
+      (a, b) =>
+        String(b.job_date).localeCompare(String(a.job_date)) ||
+        String(b.created_at || '').localeCompare(String(a.created_at || ''))
+    );
+    const pageCount = Math.max(1, Math.ceil(ledgerRows.length / 25));
+    jobsPage = Math.min(jobsPage, pageCount - 1);
+    const visibleRows = jobsHistory
+      ? ledgerRows.slice(jobsPage * 25, (jobsPage + 1) * 25)
+      : ledgerRows.slice(0, 10);
+    $('#jobsHeading').textContent = jobsHistory
+      ? 'Jobs / payment history'
+      : 'Recent jobs / payments';
+    $('#viewAllJobs').hidden = jobsHistory;
+    $('#recentJobs').hidden = !jobsHistory;
+    $('#jobsPagination').hidden = !jobsHistory;
+    $('#jobsPrevious').disabled = jobsPage === 0;
+    $('#jobsNext').disabled = jobsPage >= pageCount - 1;
+    $('#jobsPageInfo').textContent =
+      'Page ' +
+      (jobsPage + 1) +
+      ' of ' +
+      pageCount +
+      ' · ' +
+      ledgerRows.length +
+      ' jobs';
+    $('#jobsHistoryLimit').hidden = !jobsHistory || ledgerRows.length < 200;
+    $('#jobsTable').innerHTML = visibleRows.length
+      ? visibleRows
           .map(
             j =>
               `<tr><td>${safe(j.job_date)}</td><td>${safe(j.customer)}${j.lead_name ? '<br><small>Linked to CRM</small>' : ''}</td><td>${safe(j.service)}</td><td>${j.quoted_cents === null ? '—' : money.format(j.quoted_cents / 100)}</td><td>${money.format(j.collected_cents / 100)}</td><td>${j.quoted_cents === null ? '—' : money.format(Math.max(0, j.quoted_cents - j.collected_cents) / 100)}</td><td>${safe(j.payment_status)}</td><td>${safe(j.payment_method)}</td><td><button class="row-btn" data-job-edit="${safe(j.id)}">Edit</button> <button class="row-btn" data-job-delete="${safe(j.id)}">Delete</button></td></tr>`
@@ -605,6 +637,24 @@
       toast(err.message);
     }
   }
+  $('#viewAllJobs').addEventListener('click', () => {
+    jobsHistory = true;
+    jobsPage = 0;
+    refreshAll();
+  });
+  $('#recentJobs').addEventListener('click', () => {
+    jobsHistory = false;
+    jobsPage = 0;
+    refreshAll();
+  });
+  $('#jobsPrevious').addEventListener('click', () => {
+    if (jobsPage > 0) jobsPage--;
+    renderJobs(ledgerRows);
+  });
+  $('#jobsNext').addEventListener('click', () => {
+    jobsPage++;
+    renderJobs(ledgerRows);
+  });
   $('#addJob').addEventListener('click', () => openJob());
   $('#jobForm').addEventListener('submit', saveJob);
   $('#jobStatus').addEventListener('change', jobRules);

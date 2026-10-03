@@ -138,3 +138,9 @@
   #jobsTable td[colspan] { grid-column: 1 / -1; }
   #jobsTable .empty { padding: 0; }
 }
+
+#jobsPanel .jobs-history-controls { padding: 14px; border-top: 1px solid var(--line); }
+#jobsPanel .jobs-page-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+#jobsPanel .jobs-history-controls button { min-height: 44px; max-width: 100%; white-space: normal; }
+#jobsPanel .jobs-history-controls button:disabled { opacity: .5; cursor: default; }
+#jobsPageInfo, #jobsHistoryLimit { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
