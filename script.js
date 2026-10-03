@@ -345,7 +345,9 @@
     submitButton.textContent = 'Sending…';
     try {
       const data = new FormData(form);
-      data.set('_subject', `New quote request for ${businessName}`);
+      const _submissionName = value('name');
+      const _submissionTime = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+      data.set('_subject', _submissionName ? `New quote request - ${_submissionName} - ${_submissionTime}` : `New quote request - ${_submissionTime}`);
       data.set('website', businessName);
       data.set('service_area', serviceArea);
       const response = await fetch(endpoint, { method: 'POST', body: data, headers: { 'Accept': 'application/json' } });
