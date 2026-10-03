@@ -7,7 +7,7 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://admin.bells-pvm.workers.dev; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
   <title>Sparkly Nikki · Business Dashboard</title>
-  <link rel="stylesheet" href="./styles.css?v=job-modal-1">
+  <link rel="stylesheet" href="./styles.css?v=job-cards-1">
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -88,7 +88,7 @@
         <section id="salesView" class="view">
           <button id="addJob" class="primary">Add job / payment</button>
           <div id="salesKpis" class="kpi-grid"></div>
-          <article class="panel table-panel"><h2>Recent jobs / payments</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer / house</th><th>Service</th><th>Quoted</th><th>Collected</th><th>Balance</th><th>Status</th><th>Method</th><th></th></tr></thead><tbody id="jobsTable"></tbody></table></div></article>
+          <article id="jobsPanel" class="panel table-panel"><h2>Recent jobs / payments</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer / house</th><th>Service</th><th>Quoted</th><th>Collected</th><th>Balance</th><th>Status</th><th>Method</th><th></th></tr></thead><tbody id="jobsTable"></tbody></table></div></article>
           <div class="grid-2"><article class="panel"><p class="eyebrow">REVENUE</p><h2>Revenue by source</h2><div id="revenueSources"></div></article><article class="panel"><p class="eyebrow">SERVICES</p><h2>Revenue by service</h2><div id="revenueServices"></div></article></div>
         </section>
 
