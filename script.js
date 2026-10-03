@@ -346,7 +346,7 @@
     try {
       const data = new FormData(form);
       const _submissionName = value('name');
-      const _submissionTime = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+      const _submissionTime = new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true });
       data.set('_subject', _submissionName ? `New quote request - ${_submissionName} - ${_submissionTime}` : `New quote request - ${_submissionTime}`);
       data.set('website', businessName);
       data.set('service_area', serviceArea);
