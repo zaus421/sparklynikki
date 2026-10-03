@@ -20,7 +20,7 @@
   <meta property="og:image" id="og-image" content="https://sparklynikki.com/assets/logo.png">
   <link rel="stylesheet" href="styles.css">
   <script src="site-config.js"></script>
-  <script defer src="script.js?v=form-crm-1"></script>
+  <script defer src="script.js?v=contact-preferences-1"></script>
 </head>
 <body data-page="home">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -154,6 +154,22 @@
               </div>
             </div>
 
+            <div class="form-row two-col">
+              <div class="field">
+                <label for="contact-method">Preferred contact method <span>*</span></label>
+                <select id="contact-method" name="preferred_contact_method" required>
+                  <option value="">Select</option>
+                  <option>Text message</option><option>Phone call</option><option>Email</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="contact-time">Best time to reach you</label>
+                <select id="contact-time" name="best_contact_time">
+                  <option value="">Select (optional)</option>
+                  <option>Morning</option><option>Afternoon</option><option>Evening</option><option>Anytime</option>
+                </select>
+              </div>
+            </div>
             <div class="form-row three-col">
               <div class="field">
                 <label for="beds">Bedrooms <span>*</span></label>

@@ -274,7 +274,7 @@
       try { const ref = new URL(document.referrer); if (!['sparklynikki.com', 'www.sparklynikki.com'].includes(ref.hostname)) attribution.referrer = ref.origin + ref.pathname; } catch (_) {}
     }
     const details = { source_page: sourcePage };
-    for (const key of ['zip_code', 'bedrooms', 'bathrooms', 'square_feet', 'frequency', 'preferred_timing', 'pets', 'inside_fridge', 'inside_oven', 'interior_windows']) details[key] = value(key);
+    for (const key of ['zip_code', 'bedrooms', 'bathrooms', 'square_feet', 'frequency', 'preferred_contact_method','best_contact_time','preferred_timing', 'pets', 'inside_fridge', 'inside_oven', 'interior_windows']) details[key] = value(key);
     const body = JSON.stringify({
       ...attribution, event: 'form_submit', event_id: uuid(), visitor_id: visitor,
       page: location.pathname, landing_page: attribution.landing_page || location.pathname, form: form.id,
