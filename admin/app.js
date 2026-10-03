@@ -60,8 +60,7 @@
   }
 
   function daysQuery() {
-    const v = $('#dateRange').value;
-    return `?days=${encodeURIComponent(v)}`;
+    return '?days=30';
   }
   function pct(a, b) {
     return b ? `${((a / b) * 100).toFixed(1)}%` : '0%';
@@ -518,7 +517,6 @@
   $('#loginForm').addEventListener('submit', login);
   $('#logoutBtn').addEventListener('click', () => signOut());
   $('#refreshBtn').addEventListener('click', refreshAll);
-  $('#dateRange').addEventListener('change', refreshAll);
   $('#nav').addEventListener('click', e => {
     const b = e.target.closest('[data-view]');
     if (b) switchView(b.dataset.view);
