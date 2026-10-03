@@ -259,8 +259,13 @@
     if (value('_honey')) return true;
     const api = document.querySelector('script[data-api]')?.dataset.api;
     if (!api) return false;
-    const uuid = () => crypto.randomUUID ? crypto.randomUUID() : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g, c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
-    let visitor = uuid(), attribution = {}, sourcePage = '';
+    const uuid = () => crypto.randomUUID
+      ? crypto.randomUUID()
+      : '10000000-1000-4000-8000-100000000000'.replace(/[018]/g,
+          c => (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16));
+    let visitor = uuid();
+    let attribution = {};
+    let sourcePage = '';
     try {
       visitor = localStorage.getItem('sn_visitor') || visitor;
       attribution = JSON.parse(sessionStorage.getItem('sn_attribution') || '{}') || {};
@@ -271,26 +276,56 @@
       if (campaign.get(key)) attribution[key] = campaign.get(key);
     }
     if (!attribution.referrer) {
-      try { const ref = new URL(document.referrer); if (!['sparklynikki.com', 'www.sparklynikki.com'].includes(ref.hostname)) attribution.referrer = ref.origin + ref.pathname; } catch (_) {}
+      try {
+        const ref = new URL(document.referrer);
+        if (!['sparklynikki.com', 'www.sparklynikki.com'].includes(ref.hostname)) {
+          attribution.referrer = ref.origin + ref.pathname;
+        }
+      } catch (_) {}
     }
     const details = { source_page: sourcePage };
-    for (const key of ['zip_code', 'bedrooms', 'bathrooms', 'square_feet', 'frequency', 'preferred_contact_method','best_contact_time','preferred_timing', 'pets', 'inside_fridge', 'inside_oven', 'interior_windows']) details[key] = value(key);
+    for (const key of [
+      'zip_code', 'bedrooms', 'bathrooms', 'square_feet', 'frequency',
+      'preferred_contact_method', 'best_contact_time', 'preferred_timing',
+      'pets', 'inside_fridge', 'inside_oven', 'interior_windows'
+    ]) {
+      details[key] = value(key);
+    }
     const body = JSON.stringify({
-      ...attribution, event: 'form_submit', event_id: uuid(), visitor_id: visitor,
-      page: location.pathname, landing_page: attribution.landing_page || location.pathname, form: form.id,
-      lead: { name: value('name'), email: value('email'), phone: value('phone'), service: value('cleaning_type'), message: value('notes'), details }
+      ...attribution,
+      event: 'form_submit',
+      event_id: uuid(),
+      visitor_id: visitor,
+      page: location.pathname,
+      landing_page: attribution.landing_page || location.pathname,
+      form: form.id,
+      lead: {
+        name: value('name'),
+        email: value('email'),
+        phone: value('phone'),
+        service: value('cleaning_type'),
+        message: value('notes'),
+        details
+      }
     });
     for (let attempt = 0; attempt < 3; attempt++) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 8000);
       try {
         const response = await fetch(api.replace(/\/$/, '') + '/api/event', {
-          method: 'POST', mode: 'cors', credentials: 'omit', keepalive: true,
-          headers: { 'Content-Type': 'application/json' }, body, signal: controller.signal
+          method: 'POST',
+          mode: 'cors',
+          credentials: 'omit',
+          keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body,
+          signal: controller.signal
         });
         if (response.ok) return true;
         if (response.status < 500 && response.status !== 429) return false;
-      } catch (_) {} finally { clearTimeout(timeout); }
+      } catch (_) {} finally {
+        clearTimeout(timeout);
+      }
       if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
     }
     return false;
