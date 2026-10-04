@@ -407,8 +407,21 @@
     context.textContent = `${l.submission_count || 0} inquiries · ${l.quote_requests || 0} quote requests. Latest: ${l.last_page || '—'} (${l.last_form || '—'}). Landing: ${l.landing_page || '—'}. Source: ${l.source || 'Direct'}${l.campaign ? ' / ' + l.campaign : ''}. Message: ${l.message || '—'}`;
     let details = {};
     try { details = JSON.parse(l.inquiry_details || '{}') || {}; } catch (_) {}
-    if (details.preferred_contact_method) context.textContent += ` Preferred contact method: ${details.preferred_contact_method}.`;
-    if (details.best_contact_time) context.textContent += ` Best time to reach you: ${details.best_contact_time}.`;
+    let contact = $('#leadContact');
+    if (!contact) {
+      contact = document.createElement('p');
+      contact.id = 'leadContact';
+      contact.className = 'muted';
+      contact.style.overflowWrap = 'anywhere';
+      $('#leadForm').insertBefore(contact, context);
+    }
+    const contactLines = [
+      `Phone: ${l.phone ? `<a href="tel:${safe(l.phone)}">${safe(l.phone)}</a>` : 'Not provided'}`,
+      `Email: ${l.email ? `<a href="mailto:${safe(l.email)}">${safe(l.email)}</a>` : 'Not provided'}`
+    ];
+    if (details.preferred_contact_method) contactLines.push(`Preferred contact method: ${safe(details.preferred_contact_method)}`);
+    if (details.best_contact_time) contactLines.push(`Preferred contact time: ${safe(details.best_contact_time)}`);
+    contact.innerHTML = contactLines.join('<br>');
     $('#leadDialog').showModal();
   }
   async function saveLead(e) {
