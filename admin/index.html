@@ -7,8 +7,8 @@
   <meta name="referrer" content="no-referrer">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://admin.bells-pvm.workers.dev; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
   <title>Sparkly Nikki · Business Dashboard</title>
-  <link rel="stylesheet" href="./styles.css?v=mobile-crm-1">
-  <link rel="stylesheet" href="./operations.css?v=operations-1">
+  <link rel="stylesheet" href="./styles.css?v=workflow-1">
+  <link rel="stylesheet" href="./operations.css?v=workflow-1">
 </head>
 <body>
   <div id="loginView" class="login-shell">
@@ -34,7 +34,7 @@
         <button data-view="leads">Leads & CRM</button>
         <button id="operationsNav" type="button">Operations</button>
         <button data-view="analytics">Analytics</button>
-        <button data-view="sales">Sales</button>
+        <button data-view="sales">Jobs / Payments</button>
         <button data-view="health">Site health</button>
         <button id="testNav" type="button">Test</button>
       </nav>
@@ -72,6 +72,7 @@
         </section>
 
         <section id="leadsView" class="view">
+          <p>Every inquiry starts here. Update its status as you follow up. Mark it Won when booked; it will appear in Operations → Customers.</p>
           <div class="toolbar panel slim">
             <input id="leadSearch" placeholder="Search name, email, phone, service…" aria-label="Search leads">
             <select id="leadStatus"><option value="">All statuses</option><option>New</option><option>Contacted</option><option>Quote Sent</option><option>Won</option><option>Lost</option></select>
@@ -92,7 +93,7 @@
           <section id="scheduleOps" class="ops-pane active">
             <div class="operations-summary" id="scheduleSummary"></div>
             <div class="operations-head">
-              <div><p class="eyebrow">SCHEDULING</p><h2>Cleaning schedule</h2><p class="muted">Scheduling only. Payments and revenue stay in Sales.</p></div>
+              <div><p class="eyebrow">SCHEDULING</p><h2>Cleaning schedule</h2><p class="muted">Schedule booked customers here. Record completed work and money collected in Jobs / Payments.</p></div>
               <button id="scheduleJobBtn" class="primary ops-primary" type="button">Schedule job</button>
             </div>
             <div class="ops-filter-row">
@@ -109,18 +110,10 @@
 
           <section id="customersOps" class="ops-pane">
             <div class="operations-head">
-              <div><p class="eyebrow">CUSTOMER DATABASE</p><h2>Customers & inquiries</h2><p class="muted">This is the same CRM data already used by Leads & CRM.</p></div>
+              <div><p class="eyebrow">BOOKED CUSTOMERS</p><h2>Customers</h2><p class="muted">Won leads from Leads & CRM. Schedule their next cleaning, add a reminder, or manage their CRM record.</p></div>
             </div>
             <div class="ops-filter-row ops-customer-filter">
               <input id="opsCustomerSearch" type="search" placeholder="Search name, phone, email, service…" aria-label="Search customers">
-              <select id="opsCustomerStatus" aria-label="Filter customers">
-                <option value="">All statuses</option>
-                <option value="New">New inquiry</option>
-                <option value="Contacted">Contacted</option>
-                <option value="Quote Sent">Quote sent</option>
-                <option value="Won">Booked / customer</option>
-                <option value="Lost">Not booked</option>
-              </select>
             </div>
             <div id="opsCustomerList" class="ops-list"></div>
           </section>
@@ -128,7 +121,7 @@
           <section id="remindersOps" class="ops-pane">
             <div class="operations-summary" id="reminderSummary"></div>
             <div class="operations-head">
-              <div><p class="eyebrow">REMINDERS</p><h2>Follow-ups & reminders</h2><p class="muted">Keep calls, texts, quotes, and other follow-ups in one place.</p></div>
+              <div><p class="eyebrow">REMINDERS</p><h2>Follow-ups & reminders</h2><p class="muted">Track calls, texts, and tasks. Link a lead or customer when useful; reminders do not book work.</p></div>
               <button id="addReminderBtn" class="primary ops-primary" type="button">Add reminder</button>
             </div>
             <div class="ops-filter-row">
@@ -152,6 +145,7 @@
         </section>
 
         <section id="salesView" class="view">
+          <p>Record completed jobs and payments here. Scheduling a cleaning does not add revenue.</p>
           <button id="addJob" class="primary">Add job / payment</button>
           <div id="salesKpis" class="kpi-grid"></div>
           <article id="jobsPanel" class="panel table-panel"><h2 id="jobsHeading">Recent jobs / payments</h2><div class="table-wrap"><table><thead><tr><th>Date</th><th>Customer / house</th><th>Service</th><th>Quoted</th><th>Collected</th><th>Balance</th><th>Status</th><th>Method</th><th></th></tr></thead><tbody id="jobsTable"></tbody></table></div>
@@ -240,6 +234,7 @@
       <div class="dialog-head"><div><p class="eyebrow">SCHEDULING</p><h2 id="scheduleDialogTitle">Schedule job</h2></div><button type="button" class="icon-btn" data-close-ops="schedule" aria-label="Close">×</button></div>
       <input id="scheduleId" type="hidden">
       <div class="ops-dialog-body">
+        <p>Choose a booked customer. Mark their lead as Won in Leads &amp; CRM first.</p>
         <div class="form-grid">
           <label>Customer<select id="scheduleLeadId" required><option value="">Select customer</option></select></label>
           <label>Address<input id="scheduleAddress" maxlength="240" autocomplete="street-address"></label>
@@ -264,7 +259,7 @@
       <div class="ops-dialog-body">
         <label>What needs to happen?<input id="reminderOpsTitle" maxlength="180" required></label>
         <div class="form-grid">
-          <label>Customer<select id="reminderOpsLeadId"><option value="">No linked customer</option></select></label>
+          <label>Lead / customer (optional)<select id="reminderOpsLeadId"><option value="">No linked customer</option></select></label>
           <label>Due date<input id="reminderOpsDate" type="date" required></label>
           <label>Due time / alert<input id="reminderOpsTime" type="time"></label>
         </div>
@@ -292,7 +287,7 @@
   </dialog>
 
   <script src="./config.js"></script>
-  <script src="./app.js?v=lead-contact-1"></script>
-  <script src="./operations.js?v=operations-1"></script>
+  <script src="./app.js?v=workflow-1"></script>
+  <script src="./operations.js?v=workflow-1"></script>
 </body>
 </html>

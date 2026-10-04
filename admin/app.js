@@ -399,14 +399,22 @@
     $('#editNotes').value = l.notes || '';
     let context = $('#leadContext');
     if (!context) {
-      context = document.createElement('p');
+      context = document.createElement('div');
       context.id = 'leadContext';
       context.className = 'muted';
       $('#leadForm').insertBefore(context, $('.form-grid'));
     }
-    context.textContent = `${l.submission_count || 0} inquiries · ${l.quote_requests || 0} quote requests. Latest: ${l.last_page || '—'} (${l.last_form || '—'}). Landing: ${l.landing_page || '—'}. Source: ${l.source || 'Direct'}${l.campaign ? ' / ' + l.campaign : ''}. Message: ${l.message || '—'}`;
     let details = {};
     try { details = JSON.parse(l.inquiry_details || '{}') || {}; } catch (_) {}
+    const inquiryFields = [
+      ['ZIP code', 'zip_code'], ['Bedrooms', 'bedrooms'], ['Bathrooms', 'bathrooms'],
+      ['Square feet', 'square_feet'], ['Frequency', 'frequency'], ['Requested timing', 'preferred_timing'],
+      ['Pets', 'pets'], ['Inside refrigerator', 'inside_fridge'], ['Inside oven', 'inside_oven'],
+      ['Interior windows', 'interior_windows']
+    ];
+    context.innerHTML = `<h3>Inquiry</h3><p class="inquiry-message">${safe(l.message || 'No message provided.')}</p>`
+      + inquiryFields.filter(([, key]) => details[key]).map(([label, key]) => `<div>${label}: ${safe(details[key])}</div>`).join('')
+      + `<p>${l.submission_count || 0} inquiries · ${l.quote_requests || 0} quote requests.<br>Source: ${safe(l.source || 'Direct')}${l.campaign ? ' / ' + safe(l.campaign) : ''}.<br>Latest: ${safe(l.last_page || '—')} (${safe(l.last_form || '—')}). Landing: ${safe(l.landing_page || '—')}.</p>`;
     let contact = $('#leadContact');
     if (!contact) {
       contact = document.createElement('p');
@@ -416,13 +424,14 @@
       $('#leadForm').insertBefore(contact, context);
     }
     const contactLines = [
-      `Phone: ${l.phone ? `<a href="tel:${safe(l.phone)}">${safe(l.phone)}</a>` : 'Not provided'}`,
+      `Phone: ${l.phone ? `<a href="tel:${safe(l.phone)}">${safe(l.phone)}</a> · <a href="sms:${safe(l.phone)}">Text</a>` : 'Not provided'}`,
       `Email: ${l.email ? `<a href="mailto:${safe(l.email)}">${safe(l.email)}</a>` : 'Not provided'}`
     ];
     if (details.preferred_contact_method) contactLines.push(`Preferred contact method: ${safe(details.preferred_contact_method)}`);
     if (details.best_contact_time) contactLines.push(`Preferred contact time: ${safe(details.best_contact_time)}`);
     contact.innerHTML = contactLines.join('<br>');
     $('#leadDialog').showModal();
+    $('#leadDialog').scrollTop = 0;
   }
   async function saveLead(e) {
     e.preventDefault();
@@ -522,9 +531,9 @@
     );
     const map = {
       overview: ['BUSINESS OVERVIEW', 'Dashboard'],
-      leads: ['CRM', 'Leads & customers'],
+      leads: ['SALES PIPELINE', 'Leads & CRM'],
       analytics: ['WEBSITE', 'Analytics'],
-      sales: ['PIPELINE', 'Sales & revenue'],
+      sales: ['JOB HISTORY', 'Jobs / Payments'],
       health: ['SYSTEM', 'Site health']
     };
     $('#sectionEyebrow').textContent = map[name][0];
