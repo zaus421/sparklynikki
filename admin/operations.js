@@ -258,11 +258,12 @@
         ${lead.phone ? `<a href="tel:${safe(lead.phone)}">Call ${safe(lead.phone)}</a><a href="sms:${safe(lead.phone)}">Text</a>` : ''}
         ${lead.email ? `<a href="mailto:${safe(lead.email)}">Email</a>` : ''}
       </div>
+      ${details.address ? `<p>${safe(details.address)}</p>` : ''}
       ${lead.notes ? `<p class="ops-customer-notes">${safe(lead.notes)}</p>` : ''}
       <div class="ops-actions">
         <button type="button" class="row-btn" data-customer-schedule="${safe(lead.id)}">Schedule</button>
         <button type="button" class="row-btn" data-customer-reminder="${safe(lead.id)}">Add reminder</button>
-        ${lead.test_record ? '' : `<button type="button" class="row-btn" data-customer-crm="${safe(lead.id)}">Manage in CRM</button>`}
+        ${lead.test_record ? '' : `<button type="button" class="row-btn" data-customer-edit="${safe(lead.id)}">Edit</button><button type="button" class="row-btn" data-customer-crm="${safe(lead.id)}">Manage in CRM</button>`}
       </div>
     </article>`;
   }
@@ -313,13 +314,79 @@
     </article>`;
   }
 
+  let customerRequestId = '';
+
+  function openCustomer(id = '') {
+    const lead = leadById(id);
+    const details = parseDetails(lead);
+    $('#customerOpsForm').reset();
+    customerRequestId = crypto.randomUUID();
+    $('#customerOpsId').value = lead?.id || '';
+    $('#customerOpsTitle').textContent = lead ? 'Edit customer' : 'Add Existing Customer';
+    $('#customerOpsError').textContent = '';
+    for (const [field, value] of Object.entries({ Name:lead?.name, Phone:lead?.phone, Email:lead?.email,
+      Service:lead?.service, Contact:details.preferred_contact_method, Time:details.best_contact_time,
+      Address:details.address, Message:lead?.message, Notes:lead?.notes })) {
+      $('#customerOps' + field).value = value || '';
+    }
+    $('#customerOpsDialog').showModal();
+  }
+
+  async function saveCustomer(event) {
+    event.preventDefault();
+    const button = event.currentTarget.querySelector('button[type="submit"]');
+    if (button.disabled || !event.currentTarget.reportValidity()) return;
+    const id = $('#customerOpsId').value;
+    const record = {
+      request_id: customerRequestId,
+      name: $('#customerOpsName').value.trim(), phone: $('#customerOpsPhone').value.trim(),
+      email: $('#customerOpsEmail').value.trim(), service: $('#customerOpsService').value.trim(),
+      message: $('#customerOpsMessage').value.trim(), notes: $('#customerOpsNotes').value.trim(),
+      details: { preferred_contact_method: $('#customerOpsContact').value,
+        best_contact_time: $('#customerOpsTime').value, address: $('#customerOpsAddress').value.trim() }
+    };
+    button.disabled = true;
+    try {
+      await api('/api/operations/customers' + (id ? '/' + id : ''), {
+        method: id ? 'PATCH' : 'POST', body: JSON.stringify(record)
+      });
+      await loadAll();
+      $('#refreshBtn').click();
+      $('#customerOpsDialog').close();
+      toast('Customer saved');
+    } catch (error) {
+      $('#customerOpsError').textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function setCustomScheduleVisibility() {
+    const custom = $('#scheduleLeadId').value === 'custom';
+    $('#scheduleCustomWrap').hidden = !custom;
+    $('#scheduleCustomName').disabled = !custom;
+    $('#scheduleCustomName').required = custom;
+  }
+
+  function fillScheduleCustomer() {
+    setCustomScheduleVisibility();
+    const lead = leadById($('#scheduleLeadId').value);
+    if (!lead) return;
+    const service = normalizeService(lead.service);
+    $('#scheduleAddress').value = parseDetails(lead).address || '';
+    $('#scheduleService').value = SERVICES.includes(service) ? service : 'Other';
+    $('#scheduleServiceNote').value = SERVICES.includes(service) ? '' : (lead.service || '');
+    $('#scheduleNotes').value = lead.notes || lead.message || '';
+    setServiceNoteVisibility();
+  }
+
   function fillCustomerSelects() {
     const leads = allLeads().slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
     for (const selector of ['#scheduleLeadId','#reminderOpsLeadId']) {
       const select = $(selector);
       if (!select) continue;
       const current = select.value;
-      const blank = selector === '#scheduleLeadId' ? '<option value="">Select customer</option>' : '<option value="">No linked customer</option>';
+      const blank = selector === '#scheduleLeadId' ? '<option value="">Select customer</option><option value="custom">Custom</option>' : '<option value="">No linked customer</option>';
       const existingJob = allSchedule().find(job => String(job.id) === $('#scheduleId').value);
       const choices = selector === '#scheduleLeadId'
         ? leads.filter(lead => lead.status === 'Won' || String(lead.id) === String(existingJob?.lead_id))
@@ -337,7 +404,9 @@
     $('#scheduleId').value = job?.id || '';
     $('#scheduleDialogTitle').textContent = job ? 'Edit scheduled job' : 'Schedule job';
     fillCustomerSelects();
-    $('#scheduleLeadId').value = job?.lead_id || leadId || '';
+    $('#scheduleLeadId').value = job ? (job.lead_id || 'custom') : leadId || '';
+    $('#scheduleCustomName').value = job?.customer || '';
+    setCustomScheduleVisibility();
     $('#scheduleAddress').value = job?.address || '';
     $('#scheduleService').value = SERVICES.includes(service) ? service : 'Other';
     $('#scheduleServiceNote').value = job?.service_note || (job && !SERVICES.includes(normalizeService(job.service)) ? normalizeService(job.service) : '');
@@ -346,6 +415,7 @@
     $('#scheduleStart').value = job?.start_time || '';
     $('#scheduleEnd').value = job?.end_time || '';
     $('#scheduleNotes').value = job?.notes || '';
+    if (!job && leadId) fillScheduleCustomer();
     setServiceNoteVisibility();
     $('#scheduleDialog').showModal();
   }
@@ -374,16 +444,17 @@
     if (button.disabled) return;
     if (!$('#scheduleForm').reportValidity() || !validateScheduleTimes()) return;
     const lead = leadById($('#scheduleLeadId').value);
-    if (!lead) return;
+    const custom = $('#scheduleLeadId').value === 'custom';
+    if (!lead && !custom) return;
     const existing = allSchedule().find(item => String(item.id) === String($('#scheduleId').value));
-    if (lead.status !== 'Won' && String(existing?.lead_id) !== String(lead.id)) {
+    if (lead && lead.status !== 'Won' && String(existing?.lead_id) !== String(lead.id)) {
       $('#scheduleError').textContent = 'Mark this lead as Won in Leads & CRM before scheduling booked work.';
       return;
     }
     const record = {
       id: existing?.id || crypto.randomUUID(),
-      lead_id: lead.id,
-      customer: lead.name || 'Customer',
+      lead_id: lead?.id || '',
+      customer: lead?.name || $('#scheduleCustomName').value.trim(),
       address: $('#scheduleAddress').value.trim(),
       service: $('#scheduleService').value,
       service_note: $('#scheduleService').value === 'Other' ? $('#scheduleServiceNote').value.trim() : '',
@@ -396,8 +467,8 @@
 
     button.disabled = true;
     try {
-      if (existing && !existing.test_record && lead.test_record) throw new Error('A real schedule cannot be linked to a local test customer.');
-      if (existing?.test_record || lead.test_record) {
+      if (existing && !existing.test_record && lead?.test_record) throw new Error('A real schedule cannot be linked to a local test customer.');
+      if (existing?.test_record || lead?.test_record) {
         record.test_record = true;
         const index = state.test.schedule.findIndex(item => item.id === record.id);
         if (index >= 0) state.test.schedule[index] = record; else state.test.schedule.push(record);
@@ -666,6 +737,9 @@
   $('#addReminderBtn').addEventListener('click', () => openReminder());
   $('#scheduleService').addEventListener('change', setServiceNoteVisibility);
   $('#scheduleForm').addEventListener('submit', saveSchedule);
+  $('#scheduleLeadId').addEventListener('change', fillScheduleCustomer);
+  $('#addExistingCustomerBtn').addEventListener('click', () => openCustomer());
+  $('#customerOpsForm').addEventListener('submit', saveCustomer);
   $('#reminderOpsForm').addEventListener('submit', saveReminder);
   $('#appleReminderSetupBtn').addEventListener('click', () => $('#appleReminderSetupDialog').showModal());
   $('#markAppleShortcutReady').addEventListener('click', () => {
@@ -675,6 +749,7 @@
   });
   $$('[data-close-ops]').forEach(button => button.addEventListener('click', () => {
     const target = button.dataset.closeOps;
+    if (target === 'customer') $('#customerOpsDialog').close();
     if (target === 'schedule') $('#scheduleDialog').close();
     if (target === 'reminder') $('#reminderOpsDialog').close();
     if (target === 'apple-setup') $('#appleReminderSetupDialog').close();
@@ -687,6 +762,8 @@
     const apple = event.target.closest('[data-schedule-apple]');
     const customerSchedule = event.target.closest('[data-customer-schedule]');
     const customerReminder = event.target.closest('[data-customer-reminder]');
+    const customerEdit = event.target.closest('[data-customer-edit]');
+    if (customerEdit) openCustomer(customerEdit.dataset.customerEdit);
     const customerCrm = event.target.closest('[data-customer-crm]');
     const reminderToggle = event.target.closest('[data-reminder-toggle]');
     const reminderEdit = event.target.closest('[data-reminder-edit]');

@@ -407,7 +407,7 @@
     let details = {};
     try { details = JSON.parse(l.inquiry_details || '{}') || {}; } catch (_) {}
     const inquiryFields = [
-      ['ZIP code', 'zip_code'], ['Bedrooms', 'bedrooms'], ['Bathrooms', 'bathrooms'],
+      ['Address', 'address'], ['ZIP code', 'zip_code'], ['Bedrooms', 'bedrooms'], ['Bathrooms', 'bathrooms'],
       ['Square feet', 'square_feet'], ['Frequency', 'frequency'], ['Requested timing', 'preferred_timing'],
       ['Pets', 'pets'], ['Inside refrigerator', 'inside_fridge'], ['Inside oven', 'inside_oven'],
       ['Interior windows', 'interior_windows']

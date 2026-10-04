@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive">
   <meta name="referrer" content="no-referrer">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://admin.bells-pvm.workers.dev; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://admin.nikkisparklysolutions.workers.dev; img-src 'self' data:; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'">
   <title>Sparkly Nikki · Business Dashboard</title>
   <link rel="stylesheet" href="./styles.css?v=workflow-1">
   <link rel="stylesheet" href="./operations.css?v=workflow-1">
@@ -111,6 +111,7 @@
           <section id="customersOps" class="ops-pane">
             <div class="operations-head">
               <div><p class="eyebrow">BOOKED CUSTOMERS</p><h2>Customers</h2><p class="muted">Won leads from Leads & CRM. Schedule their next cleaning, add a reminder, or manage their CRM record.</p></div>
+              <button id="addExistingCustomerBtn" type="button" class="primary ops-primary">Add Existing Customer</button>
             </div>
             <div class="ops-filter-row ops-customer-filter">
               <input id="opsCustomerSearch" type="search" placeholder="Search name, phone, email, service…" aria-label="Search customers">
@@ -229,14 +230,37 @@
     </form>
   </dialog>
 
+  <dialog id="customerOpsDialog" class="ops-dialog" aria-labelledby="customerOpsTitle">
+    <form id="customerOpsForm">
+      <div class="dialog-head"><h2 id="customerOpsTitle">Add Existing Customer</h2><button type="button" class="icon-btn" data-close-ops="customer" aria-label="Close">×</button></div>
+      <div class="ops-dialog-body">
+        <input id="customerOpsId" type="hidden">
+        <div class="form-grid">
+          <label>Name<input id="customerOpsName" maxlength="160" autocomplete="name" required></label>
+          <label>Phone<input id="customerOpsPhone" type="tel" maxlength="80" autocomplete="tel"></label>
+          <label>Email<input id="customerOpsEmail" type="email" maxlength="200" autocomplete="email"></label>
+          <label>Service<input id="customerOpsService" maxlength="180" list="jobServices"></label>
+          <label>Preferred contact method<select id="customerOpsContact"><option value="">Not specified</option><option>Text message</option><option>Phone call</option><option>Email</option></select></label>
+          <label>Best time to reach you<select id="customerOpsTime"><option value="">Not specified</option><option>Morning</option><option>Afternoon</option><option>Evening</option><option>Anytime</option></select></label>
+        </div>
+        <label>Address<input id="customerOpsAddress" maxlength="240" autocomplete="street-address"></label>
+        <label>Customer / service details<textarea id="customerOpsMessage" rows="3" maxlength="3000"></textarea></label>
+        <label>Notes<textarea id="customerOpsNotes" rows="3" maxlength="4000"></textarea></label>
+        <p id="customerOpsError" class="form-error" role="alert"></p>
+      </div>
+      <div class="dialog-actions"><button type="button" class="secondary" data-close-ops="customer">Cancel</button><button type="submit" class="primary ops-primary">Save customer</button></div>
+    </form>
+  </dialog>
+
   <dialog id="scheduleDialog" class="ops-dialog" aria-labelledby="scheduleDialogTitle">
     <form id="scheduleForm">
       <div class="dialog-head"><div><p class="eyebrow">SCHEDULING</p><h2 id="scheduleDialogTitle">Schedule job</h2></div><button type="button" class="icon-btn" data-close-ops="schedule" aria-label="Close">×</button></div>
       <input id="scheduleId" type="hidden">
       <div class="ops-dialog-body">
-        <p>Choose a booked customer. Mark their lead as Won in Leads &amp; CRM first.</p>
+        <p>Choose a customer, or Custom for a job without a linked customer record.</p>
         <div class="form-grid">
           <label>Customer<select id="scheduleLeadId" required><option value="">Select customer</option></select></label>
+          <label id="scheduleCustomWrap" hidden>Customer / job name<input id="scheduleCustomName" maxlength="160" disabled></label>
           <label>Address<input id="scheduleAddress" maxlength="240" autocomplete="street-address"></label>
           <label>Service<select id="scheduleService" required><option>Recurring cleaning</option><option>One-time cleaning</option><option>Deep cleaning</option><option>Move-in / move-out</option><option>Other</option></select></label>
           <label>Status<select id="scheduleStatus"><option>Scheduled</option><option>In Progress</option><option>Completed</option><option>Cancelled</option></select></label>
@@ -286,8 +310,8 @@
     </div>
   </dialog>
 
-  <script src="./config.js"></script>
-  <script src="./app.js?v=workflow-1"></script>
-  <script src="./operations.js?v=workflow-1"></script>
+  <script src="./config.js?v=nikki-1"></script>
+  <script src="./app.js?v=customers-1"></script>
+  <script src="./operations.js?v=customers-1"></script>
 </body>
 </html>
