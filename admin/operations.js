@@ -10,7 +10,8 @@
   const APPLE_SHORTCUT_KEY = 'sn_apple_reminder_shortcut_ready';
   const SERVICES = ['Recurring cleaning', 'One-time cleaning', 'Deep cleaning', 'Move-in / move-out', 'Other'];
   const STATUS_LABELS = { Won: 'Booked / customer', Lost: 'Not booked' };
-  const state = { leads: [], schedule: [], reminders: [], test: loadTestData(), backendReady: true };
+  const state = { leads: [], schedule: [], reminders: [], test: loadTestData(), backendReady: true, lookup: [], selectedLead: null };
+  const pages = Object.fromEntries(['schedule','customers','reminders'].map(name=>[name,{cursors:[null],next:null,request:0,summary:{}}]));
 
   function safe(value = '') {
     return String(value).replace(/[&<>'"]/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;' })[char]);
@@ -90,7 +91,7 @@
   }
 
   function allLeads() {
-    return [...state.leads, ...state.test.leads];
+    return [...new Map([...state.leads,...state.lookup,...(state.selectedLead?[state.selectedLead]:[]),...state.test.leads].map(lead=>[String(lead.id),lead])).values()];
   }
 
   function allSchedule() {
@@ -135,32 +136,27 @@
     el.textContent = message;
   }
 
-  async function loadAll() {
-    if (!sessionStorage.getItem('sn_admin_token')) return;
-    let operationsError = '';
+  async function loadAll(reset=true) {
+    if (!sessionStorage.getItem('sn_admin_token') || !$('#operationsView').classList.contains('active-view')) return;
+    const name=$('.ops-pane.active').id.replace('Ops',''), page=pages[name];
+    if(reset!==false)page.cursors=[null];
+    const request=++page.request;
+    page.loading=true;
+    $('#'+name+'Previous').disabled=true;$('#'+name+'Next').disabled=true;
+    const query=new URLSearchParams({limit:'25'});
+    if(page.cursors.at(-1))query.set('cursor',page.cursors.at(-1));
+    if(name==='customers'){query.set('status','Won');query.set('q',$('#opsCustomerSearch').value.trim());}
+    else query.set('filter',$(name==='schedule'?'#scheduleFilter':'#reminderFilter').value);
     try {
-      const result = await api('/api/leads?');
-      state.leads = result.leads || [];
-    } catch (error) {
-      operationsError = error.message;
-    }
-
-    try {
-      const [scheduleResult, reminderResult] = await Promise.all([
-        api('/api/operations/schedule'),
-        api('/api/operations/reminders')
-      ]);
-      state.schedule = scheduleResult.jobs || [];
-      state.reminders = reminderResult.reminders || [];
-      state.backendReady = true;
-    } catch (error) {
-      state.backendReady = false;
-      if (error.status === 404) operationsError = 'Operations backend is not installed yet. Customers still use the live CRM; Scheduling and Reminders need the included Worker extension.';
-      else operationsError = error.message;
-    }
-
-    setOperationsStatus(operationsError);
-    renderAll();
+      const result=await api((name==='customers'?'/api/leads':'/api/operations/'+name)+'?'+query);
+      if(request!==page.request)return;
+      if(name==='customers')state.leads=result.leads||[];
+      if(name==='schedule')state.schedule=result.jobs||[];
+      if(name==='reminders')state.reminders=result.reminders||[];
+      page.next=result.nextCursor;page.summary=result.summary||{};
+      state.backendReady=true;setOperationsStatus('');
+    }catch(error){if(request===page.request)setOperationsStatus(error.message);}
+    finally{if(request===page.request){page.loading=false;renderAll();}}
   }
 
   function renderAll() {
@@ -168,7 +164,11 @@
     renderCustomers();
     renderReminders();
     renderTestCount();
-    fillCustomerSelects();
+    for(const [name,page] of Object.entries(pages)) {
+      $('#'+name+'Previous').disabled=page.loading||page.cursors.length===1;
+      $('#'+name+'Next').disabled=page.loading||!page.next;
+      $('#'+name+'PageInfo').textContent='Page '+page.cursors.length;
+    }
   }
 
   function showSpecialView(name) {
@@ -184,6 +184,7 @@
   function showOpsTab(name) {
     $$('.operations-tabs button').forEach(button => button.classList.toggle('active', button.dataset.opsTab === name));
     $$('.ops-pane').forEach(pane => pane.classList.toggle('active', pane.id === `${name}Ops`));
+    loadAll();
   }
 
   function scheduleMatches(job, filter) {
@@ -198,14 +199,14 @@
 
   function renderSchedule() {
     const rows = allSchedule().slice().sort((a, b) => String(a.job_date).localeCompare(String(b.job_date)) || String(a.start_time || '').localeCompare(String(b.start_time || '')));
-    const active = rows.filter(job => job.job_date >= today() && !['Completed','Cancelled'].includes(job.status));
+    const active = state.test.schedule.filter(job => job.job_date >= today() && !['Completed','Cancelled'].includes(job.status));
     const todayRows = active.filter(job => job.job_date === today());
     const weekEnd = addDays(today(), 7);
     const weekRows = active.filter(job => job.job_date >= today() && job.job_date <= weekEnd);
     $('#scheduleSummary').innerHTML = [
-      ['Today', todayRows.length],
-      ['Next 7 days', weekRows.length],
-      ['Upcoming', active.length]
+      ['Today', Number(pages.schedule.summary.today||0)+todayRows.length],
+      ['Next 7 days', Number(pages.schedule.summary.week||0)+weekRows.length],
+      ['Upcoming', Number(pages.schedule.summary.upcoming||0)+active.length]
     ].map(([label, value]) => `<article class="ops-summary-card"><div class="ops-summary-label">${safe(label)}</div><div class="ops-summary-value">${value}</div></article>`).join('');
 
     const filter = $('#scheduleFilter')?.value || 'upcoming';
@@ -222,7 +223,7 @@
         <div><h3>${safe(job.customer || lead?.name || 'Customer')}</h3><p>${safe(prettyDate(job.job_date))} · ${safe(times)}${job.address ? `<br>${safe(job.address)}` : ''}</p></div>
         ${job.test_record ? '<span class="ops-test-badge">Test</span>' : `<span class="ops-chip ${statusClass}">${safe(job.status || 'Scheduled')}</span>`}
       </div>
-      <div class="ops-card-meta"><span class="ops-chip">${safe(serviceText(job))}</span>${lead ? `<span class="ops-chip">CRM linked</span>` : ''}</div>
+      <div class="ops-card-meta"><span class="ops-chip">${safe(serviceText(job))}</span>${job.lead_id ? `<span class="ops-chip">CRM linked</span>` : ''}</div>
       ${job.notes ? `<p>${safe(job.notes)}</p>` : ''}
       <div class="ops-actions">
         <button type="button" class="row-btn" data-schedule-google="${safe(job.id)}">Google Calendar</button>
@@ -235,7 +236,7 @@
 
   function renderCustomers() {
     const query = ($('#opsCustomerSearch')?.value || '').trim().toLowerCase();
-    const rows = allLeads().filter(lead => {
+    const rows = [...state.leads,...state.test.leads].filter(lead => {
       if (lead.status !== 'Won') return false;
       if (!query) return true;
       const haystack = [lead.name, lead.phone, lead.email, lead.service, lead.notes].join(' ').toLowerCase();
@@ -280,13 +281,13 @@
 
   function renderReminders() {
     const rows = allReminders().slice().sort((a, b) => Number(Boolean(a.completed)) - Number(Boolean(b.completed)) || String(a.due_date).localeCompare(String(b.due_date)) || String(a.due_time || '').localeCompare(String(b.due_time || '')));
-    const open = rows.filter(item => !item.completed);
+    const open = state.test.reminders.filter(item => !item.completed);
     const overdue = open.filter(item => item.due_date < today());
     const dueToday = open.filter(item => item.due_date === today());
     $('#reminderSummary').innerHTML = [
-      ['Open', open.length],
-      ['Due today', dueToday.length],
-      ['Overdue', overdue.length]
+      ['Open', Number(pages.reminders.summary.open||0)+open.length],
+      ['Due today', Number(pages.reminders.summary.today||0)+dueToday.length],
+      ['Overdue', Number(pages.reminders.summary.overdue||0)+overdue.length]
     ].map(([label, value]) => `<article class="ops-summary-card"><div class="ops-summary-label">${safe(label)}</div><div class="ops-summary-value">${value}</div></article>`).join('');
 
     const filter = $('#reminderFilter')?.value || 'open';
@@ -301,7 +302,7 @@
     const due = `${prettyDate(reminder.due_date)}${reminder.due_time ? ` at ${prettyTime(reminder.due_time)}` : ''}`;
     return `<article class="ops-card ${reminder.completed ? 'ops-reminder-done' : ''} ${overdue ? 'ops-overdue' : dueToday ? 'ops-today' : ''}">
       <div class="ops-card-top">
-        <div><h3>${safe(reminder.title)}</h3><p>${safe(due)}${lead ? ` · ${safe(lead.name)}` : ''}</p></div>
+        <div><h3>${safe(reminder.title)}</h3><p>${safe(due)}${reminder.customer || lead ? ` · ${safe(reminder.customer || lead.name)}` : ''}</p></div>
         ${reminder.test_record ? '<span class="ops-test-badge">Test</span>' : overdue ? '<span class="ops-chip bad">Overdue</span>' : dueToday ? '<span class="ops-chip warn">Today</span>' : reminder.completed ? '<span class="ops-chip good">Done</span>' : '<span class="ops-chip">Open</span>'}
       </div>
       ${reminder.notes ? `<p>${safe(reminder.notes)}</p>` : ''}
@@ -350,7 +351,6 @@
       await api('/api/operations/customers' + (id ? '/' + id : ''), {
         method: id ? 'PATCH' : 'POST', body: JSON.stringify(record)
       });
-      await loadAll();
       $('#refreshBtn').click();
       $('#customerOpsDialog').close();
       toast('Customer saved');
@@ -380,30 +380,40 @@
     setServiceNoteVisibility();
   }
 
-  function fillCustomerSelects() {
-    const leads = allLeads().slice().sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
-    for (const selector of ['#scheduleLeadId','#reminderOpsLeadId']) {
-      const select = $(selector);
-      if (!select) continue;
-      const current = select.value;
-      const blank = selector === '#scheduleLeadId' ? '<option value="">Select customer</option><option value="custom">Custom</option>' : '<option value="">No linked customer</option>';
-      const existingJob = allSchedule().find(job => String(job.id) === $('#scheduleId').value);
-      const choices = selector === '#scheduleLeadId'
-        ? leads.filter(lead => lead.status === 'Won' || String(lead.id) === String(existingJob?.lead_id))
-        : leads;
-      select.innerHTML = blank + choices.map(lead => `<option value="${safe(lead.id)}">${safe(lead.name || 'Unknown')}${lead.test_record ? ' [TEST]' : ''}</option>`).join('');
-      if ([...select.options].some(option => option.value === current)) select.value = current;
-    }
+  let lookupRequest=0;
+  async function loadCustomerOptions(kind,query='',selectedId='') {
+    const request=++lookupRequest;
+    const params=new URLSearchParams({lookup:'1',limit:'20',q:query});
+    if(kind==='schedule')params.set('status','Won');
+    const result=await api('/api/leads?'+params);
+    let selected=selectedId?leadById(selectedId):null;
+    if(selectedId&&!selected&&!String(selectedId).startsWith('ops-test-'))selected=(await api('/api/leads/'+encodeURIComponent(selectedId))).lead;
+    if(request!==lookupRequest)return;
+    state.lookup=result.leads||[];state.selectedLead=selected;
+    fillCustomerSelects(kind,selectedId);
   }
 
-  function openSchedule(id = '', leadId = '') {
+  function fillCustomerSelects(kind,selectedId='') {
+    const select=$(kind==='schedule'?'#scheduleLeadId':'#reminderOpsLeadId');
+    const current=selectedId||select.value;
+    const choices=[...new Map([...state.lookup,...(state.selectedLead?[state.selectedLead]:[]),...state.test.leads]
+      .filter(lead=>kind!=='schedule'||lead.status==='Won'||String(lead.id)===String(current))
+      .map(lead=>[String(lead.id),lead])).values()];
+    const blank=kind==='schedule'?'<option value="">Select customer</option><option value="custom">Custom</option>':'<option value="">No linked customer</option>';
+    select.innerHTML=blank+choices.map(lead=>'<option value="'+safe(lead.id)+'">'+safe(lead.name||'Unknown')+(lead.test_record?' [TEST]':'')+'</option>').join('');
+    if([...select.options].some(option=>option.value===String(current)))select.value=current;
+  }
+
+  async function openSchedule(id = '', leadId = '') {
     const job = allSchedule().find(item => String(item.id) === String(id));
+    try { await loadCustomerOptions('schedule','',job?.lead_id||leadId); }catch(error){toast(error.message);return;}
     const service = normalizeService(job?.service || leadById(leadId)?.service);
     $('#scheduleForm').reset();
     $('#scheduleError').textContent = '';
-    $('#scheduleId').value = job?.id || '';
+    $('#scheduleId').value = job?.id || crypto.randomUUID();
+    $('#scheduleCustomerSearch').value='';
     $('#scheduleDialogTitle').textContent = job ? 'Edit scheduled job' : 'Schedule job';
-    fillCustomerSelects();
+    fillCustomerSelects('schedule',job?.lead_id||leadId);
     $('#scheduleLeadId').value = job ? (job.lead_id || 'custom') : leadId || '';
     $('#scheduleCustomName').value = job?.customer || '';
     setCustomScheduleVisibility();
@@ -452,7 +462,7 @@
       return;
     }
     const record = {
-      id: existing?.id || crypto.randomUUID(),
+      id: existing?.id || $('#scheduleId').value,
       lead_id: lead?.id || '',
       customer: lead?.name || $('#scheduleCustomName').value.trim(),
       address: $('#scheduleAddress').value.trim(),
@@ -546,13 +556,15 @@
     downloadBlob(lines.join('\r\n'), `sparkly-nikki-${job.job_date}.ics`, 'text/calendar;charset=utf-8');
   }
 
-  function openReminder(id = '', leadId = '') {
+  async function openReminder(id = '', leadId = '') {
     const reminder = allReminders().find(item => String(item.id) === String(id));
+    try { await loadCustomerOptions('reminders','',reminder?.lead_id||leadId); }catch(error){toast(error.message);return;}
     $('#reminderOpsForm').reset();
     $('#reminderOpsError').textContent = '';
-    $('#reminderOpsId').value = reminder?.id || '';
+    $('#reminderOpsId').value = reminder?.id || crypto.randomUUID();
+    $('#reminderCustomerSearch').value='';
     $('#reminderOpsDialogTitle').textContent = reminder ? 'Edit reminder' : 'Add reminder';
-    fillCustomerSelects();
+    fillCustomerSelects('reminders',reminder?.lead_id||leadId);
     $('#reminderOpsTitle').value = reminder?.title || '';
     $('#reminderOpsLeadId').value = reminder?.lead_id || leadId || '';
     $('#reminderOpsDate').value = reminder?.due_date || today();
@@ -569,7 +581,7 @@
     const lead = leadById($('#reminderOpsLeadId').value);
     const existing = allReminders().find(item => String(item.id) === String($('#reminderOpsId').value));
     const record = {
-      id: existing?.id || crypto.randomUUID(),
+      id: existing?.id || $('#reminderOpsId').value,
       lead_id: lead?.id || null,
       customer: lead?.name || '',
       title: $('#reminderOpsTitle').value.trim(),
@@ -728,11 +740,20 @@
     $('#operationsNav').classList.remove('active');
     $('#testNav').classList.remove('active');
   }));
-  $('#refreshBtn').addEventListener('click', loadAll);
+  $('#refreshBtn').addEventListener('click',()=>loadAll());
+  for(const [name,page] of Object.entries(pages)) {
+    $('#'+name+'Previous').addEventListener('click',()=>{if(page.cursors.length>1){page.cursors.pop();loadAll(false);}});
+    $('#'+name+'Next').addEventListener('click',()=>{if(page.next){page.cursors.push(page.next);loadAll(false);}});
+  }
+  for(const [input,kind,select] of [['#scheduleCustomerSearch','schedule','#scheduleLeadId'],['#reminderCustomerSearch','reminders','#reminderOpsLeadId']]) {
+    let timer;
+    $(input).addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>loadCustomerOptions(kind,$(input).value.trim(),$(select).value==='custom'?'':$(select).value).catch(error=>toast(error.message)),300);});
+  }
   $$('.operations-tabs button').forEach(button => button.addEventListener('click', () => showOpsTab(button.dataset.opsTab)));
-  $('#scheduleFilter').addEventListener('change', renderSchedule);
-  $('#opsCustomerSearch').addEventListener('input', renderCustomers);
-  $('#reminderFilter').addEventListener('change', renderReminders);
+  $('#scheduleFilter').addEventListener('change',()=>loadAll());
+  let customerSearchTimer;
+  $('#opsCustomerSearch').addEventListener('input',()=>{clearTimeout(customerSearchTimer);customerSearchTimer=setTimeout(()=>loadAll(),300);});
+  $('#reminderFilter').addEventListener('change',()=>loadAll());
   $('#scheduleJobBtn').addEventListener('click', () => openSchedule());
   $('#addReminderBtn').addEventListener('click', () => openReminder());
   $('#scheduleService').addEventListener('change', setServiceNoteVisibility);
@@ -774,8 +795,8 @@
     if (scheduleDelete) deleteSchedule(scheduleDelete.dataset.scheduleDelete);
     if (google) googleCalendar(allSchedule().find(item => String(item.id) === String(google.dataset.scheduleGoogle)));
     if (apple) appleCalendar(allSchedule().find(item => String(item.id) === String(apple.dataset.scheduleApple)));
-    if (customerSchedule) { showSpecialView('operations'); showOpsTab('schedule'); openSchedule('', customerSchedule.dataset.customerSchedule); }
-    if (customerReminder) { showSpecialView('operations'); showOpsTab('reminders'); openReminder('', customerReminder.dataset.customerReminder); }
+    if (customerSchedule) { openSchedule('', customerSchedule.dataset.customerSchedule); showOpsTab('schedule'); }
+    if (customerReminder) { openReminder('', customerReminder.dataset.customerReminder); showOpsTab('reminders'); }
     if (customerCrm) manageCustomerInCrm(customerCrm.dataset.customerCrm);
     if (reminderToggle) toggleReminder(reminderToggle.dataset.reminderToggle);
     if (reminderEdit) openReminder(reminderEdit.dataset.reminderEdit);

@@ -78,7 +78,8 @@
             <select id="leadStatus"><option value="">All statuses</option><option>New</option><option>Contacted</option><option>Quote Sent</option><option>Won</option><option>Lost</option></select>
             <button id="exportBtn" class="secondary">Export CSV</button>
           </div>
-          <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Lead</th><th>Service</th><th>Source</th><th>Status</th><th>Quote</th><th>Revenue</th><th>Received</th><th></th></tr></thead><tbody id="leadsTable"></tbody></table></div></article>
+          <article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>Lead</th><th>Service</th><th>Source</th><th>Status</th><th>Quote</th><th>Revenue</th><th>Received</th><th></th></tr></thead><tbody id="leadsTable"></tbody></table></div>
+          <div class="dialog-actions"><button id="leadsPrevious" type="button" class="secondary" disabled>Previous</button><span id="leadsPageInfo" role="status">Page 1</span><button id="leadsNext" type="button" class="secondary" disabled>Next</button></div></article>
         </section>
 
         <section id="operationsView" class="view">
@@ -106,6 +107,7 @@
               </select>
             </div>
             <div id="scheduleList" class="ops-list"></div>
+            <div class="ops-actions"><button id="schedulePrevious" type="button" class="secondary" disabled>Previous</button><span id="schedulePageInfo" role="status">Page 1</span><button id="scheduleNext" type="button" class="secondary" disabled>Next</button></div>
           </section>
 
           <section id="customersOps" class="ops-pane">
@@ -117,6 +119,7 @@
               <input id="opsCustomerSearch" type="search" placeholder="Search name, phone, email, service…" aria-label="Search customers">
             </div>
             <div id="opsCustomerList" class="ops-list"></div>
+            <div class="ops-actions"><button id="customersPrevious" type="button" class="secondary" disabled>Previous</button><span id="customersPageInfo" role="status">Page 1</span><button id="customersNext" type="button" class="secondary" disabled>Next</button></div>
           </section>
 
           <section id="remindersOps" class="ops-pane">
@@ -136,6 +139,7 @@
               <button id="appleReminderSetupBtn" class="secondary" type="button">iPhone Reminders setup</button>
             </div>
             <div id="reminderList" class="ops-list"></div>
+            <div class="ops-actions"><button id="remindersPrevious" type="button" class="secondary" disabled>Previous</button><span id="remindersPageInfo" role="status">Page 1</span><button id="remindersNext" type="button" class="secondary" disabled>Next</button></div>
           </section>
         </section>
 
@@ -157,7 +161,7 @@
                 <p id="jobsPageInfo" aria-live="polite"></p>
                 <div class="jobs-page-buttons"><button id="jobsPrevious" class="secondary" type="button">Previous</button><button id="jobsNext" class="secondary" type="button">Next</button></div>
               </div>
-              <p id="jobsHistoryLimit" hidden>The existing API provides the latest 200 jobs.</p>
+
             </div>
           </article>
           <div class="grid-2"><article class="panel"><p class="eyebrow">REVENUE</p><h2>Revenue by source</h2><div id="revenueSources"></div></article><article class="panel"><p class="eyebrow">SERVICES</p><h2>Revenue by service</h2><div id="revenueServices"></div></article></div>
@@ -259,6 +263,7 @@
       <div class="ops-dialog-body">
         <p>Choose a customer, or Custom for a job without a linked customer record.</p>
         <div class="form-grid">
+          <label>Find customer<input id="scheduleCustomerSearch" type="search" placeholder="Name, email or phone"></label>
           <label>Customer<select id="scheduleLeadId" required><option value="">Select customer</option></select></label>
           <label id="scheduleCustomWrap" hidden>Customer / job name<input id="scheduleCustomName" maxlength="160" disabled></label>
           <label>Address<input id="scheduleAddress" maxlength="240" autocomplete="street-address"></label>
@@ -283,6 +288,7 @@
       <div class="ops-dialog-body">
         <label>What needs to happen?<input id="reminderOpsTitle" maxlength="180" required></label>
         <div class="form-grid">
+          <label>Find lead / customer<input id="reminderCustomerSearch" type="search" placeholder="Name, email or phone"></label>
           <label>Lead / customer (optional)<select id="reminderOpsLeadId"><option value="">No linked customer</option></select></label>
           <label>Due date<input id="reminderOpsDate" type="date" required></label>
           <label>Due time / alert<input id="reminderOpsTime" type="time"></label>
@@ -311,7 +317,7 @@
   </dialog>
 
   <script src="./config.js?v=nikki-1"></script>
-  <script src="./app.js?v=customers-1"></script>
-  <script src="./operations.js?v=customers-1"></script>
+  <script src="./app.js?v=scale-1"></script>
+  <script src="./operations.js?v=scale-1"></script>
 </body>
 </html>

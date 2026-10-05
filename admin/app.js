@@ -311,7 +311,7 @@
     ]);
   }
   function renderSales(d) {
-    renderJobs(d.jobs);
+    if(!jobsHistory)renderJobs(d.jobs);
     const m = d.metrics || {};
     $('#salesKpis').innerHTML = [
       kpi('Won revenue', money.format(m.revenue || 0), 'money collected'),
@@ -369,12 +369,24 @@
       .join('')}</div>`;
   }
 
-  async function loadLeads() {
+  let leadCursors=[null], leadNext=null, leadRequest=0;
+  async function loadLeads(reset=true) {
+    if(reset!==false)leadCursors=[null];
+    const request=++leadRequest;
+    $('#leadsPrevious').disabled=true;
+    $('#leadsNext').disabled=true;
     const qs = new URLSearchParams();
     if ($('#leadSearch').value.trim())
       qs.set('q', $('#leadSearch').value.trim());
     if ($('#leadStatus').value) qs.set('status', $('#leadStatus').value);
+    qs.set('limit','25');
+    if(leadCursors.at(-1))qs.set('cursor',leadCursors.at(-1));
     const r = await api(`/api/leads?${qs}`);
+    if(request!==leadRequest)return;
+    leadNext=r.nextCursor;
+    $('#leadsPrevious').disabled=leadCursors.length===1;
+    $('#leadsNext').disabled=!leadNext;
+    $('#leadsPageInfo').textContent='Page '+leadCursors.length;
     state.leads = r.leads || [];
     $('#leadsTable').innerHTML = state.leads.length
       ? state.leads
@@ -385,8 +397,10 @@
           .join('')
       : '<tr><td colspan="8"><div class="empty">No leads match this filter.</div></td></tr>';
   }
-  function openLead(id) {
-    const l = state.leads.find(x => String(x.id) === String(id));
+  async function openLead(id) {
+    let l;
+    try { l=(await api('/api/leads/'+encodeURIComponent(id))).lead; }
+    catch(error){toast(error.message);return;}
     if (!l) return;
     $('#leadId').value = l.id;
     $('#leadDialogTitle').textContent = l.name || 'Edit lead';
@@ -452,19 +466,18 @@
     await refreshAll();
   }
   async function exportCsv() {
-    const res = await fetch(`${API}/api/export/leads.csv`, {
-      headers: { Authorization: `Bearer ${state.token}` }
-    });
-    if (!res.ok) return toast('Export failed');
-    const blob = await res.blob(),
-      u = URL.createObjectURL(blob),
-      a = document.createElement('a');
-    a.href = u;
-    a.download = 'sparkly-nikki-leads.csv';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(u);
+    $('#exportBtn').disabled=true;
+    try {
+      const chunks=[];let cursor='';
+      do {
+        const query=new URLSearchParams();if(cursor)query.set('cursor',cursor);
+        const response=await fetch(API+'/api/export/leads.csv?'+query,{headers:{Authorization:'Bearer '+state.token}});
+        if(!response.ok)throw new Error('Export failed');
+        chunks.push(await response.blob());cursor=response.headers.get('X-Next-Cursor')||'';
+      } while(cursor);
+      const url=URL.createObjectURL(new Blob(chunks,{type:'text/csv'})),link=document.createElement('a');
+      link.href=url;link.download='sparkly-nikki-leads.csv';document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+    }catch(error){toast(error.message);}finally{$('#exportBtn').disabled=false;}
   }
 
   let refreshing = false,
@@ -479,16 +492,13 @@
     setLoading(true);
     try {
       const d = await api(`/api/dashboard${daysQuery()}`);
-      if (jobsHistory) {
-        const history = await api('/api/jobs?days=all');
-        if (jobsHistory) d.jobs = history.jobs;
-      }
       state.dashboard = d;
       renderOverview(d);
       renderAnalytics(d);
       renderSales(d);
-      await loadLeads();
-      await loadHealth();
+      if(jobsHistory)await loadJobs();
+      if($('#leadsView').classList.contains('active-view'))await loadLeads();
+      if($('#healthView').classList.contains('active-view'))await loadHealth();
       setApiStatus(true);
     } catch (err) {
       setApiStatus(false);
@@ -538,6 +548,8 @@
     };
     $('#sectionEyebrow').textContent = map[name][0];
     $('#sectionTitle').textContent = map[name][1];
+    if(name==='leads')loadLeads().catch(error=>toast(error.message));
+    if(name==='health')loadHealth();
   }
 
   $('#loginForm').addEventListener('submit', login);
@@ -558,43 +570,33 @@
   $('#cancelLead').addEventListener('click', () => $('#leadDialog').close());
   $('#leadSearch').addEventListener('input', () => {
     clearTimeout(window.__ls);
-    window.__ls = setTimeout(loadLeads, 250);
+    window.__ls = setTimeout(()=>loadLeads().catch(error=>toast(error.message)), 300);
   });
-  $('#leadStatus').addEventListener('change', loadLeads);
+  $('#leadStatus').addEventListener('change', ()=>loadLeads().catch(error=>toast(error.message)));
+  $('#leadsPrevious').addEventListener('click',()=>{if(leadCursors.length>1){leadCursors.pop();loadLeads(false).catch(error=>toast(error.message));}});
+  $('#leadsNext').addEventListener('click',()=>{if(leadNext){leadCursors.push(leadNext);loadLeads(false).catch(error=>toast(error.message));}});
   $('#exportBtn').addEventListener('click', exportCsv);
 
   let ledgerRows = [],
     customerOptions = [];
-  let jobsHistory = false,
-    jobsPage = 0;
+  let jobsHistory=false, jobCursors=[null], jobNext=null, jobRequest=0;
+  async function loadJobs(reset=true) {
+    if(reset)jobCursors=[null];
+    const request=++jobRequest;
+    $('#jobsPrevious').disabled=true;$('#jobsNext').disabled=true;
+    const query=new URLSearchParams({days:'all',limit:'25'});
+    if(jobCursors.at(-1))query.set('cursor',jobCursors.at(-1));
+    const result=await api('/api/jobs?'+query);
+    if(request!==jobRequest||!jobsHistory)return;
+    jobNext=result.nextCursor;renderJobs(result.jobs);
+  }
   function renderJobs(rows) {
-    ledgerRows = [...(rows || [])].sort(
-      (a, b) =>
-        String(b.job_date).localeCompare(String(a.job_date)) ||
-        String(b.created_at || '').localeCompare(String(a.created_at || ''))
-    );
-    const pageCount = Math.max(1, Math.ceil(ledgerRows.length / 25));
-    jobsPage = Math.min(jobsPage, pageCount - 1);
-    const visibleRows = jobsHistory
-      ? ledgerRows.slice(jobsPage * 25, (jobsPage + 1) * 25)
-      : ledgerRows.slice(0, 10);
-    $('#jobsHeading').textContent = jobsHistory
-      ? 'Jobs / payment history'
-      : 'Recent jobs / payments';
-    $('#viewAllJobs').hidden = jobsHistory;
-    $('#recentJobs').hidden = !jobsHistory;
-    $('#jobsPagination').hidden = !jobsHistory;
-    $('#jobsPrevious').disabled = jobsPage === 0;
-    $('#jobsNext').disabled = jobsPage >= pageCount - 1;
-    $('#jobsPageInfo').textContent =
-      'Page ' +
-      (jobsPage + 1) +
-      ' of ' +
-      pageCount +
-      ' · ' +
-      ledgerRows.length +
-      ' jobs';
-    $('#jobsHistoryLimit').hidden = !jobsHistory || ledgerRows.length < 200;
+    ledgerRows=rows||[];
+    const visibleRows=jobsHistory?ledgerRows:ledgerRows.slice(0,10);
+    $('#jobsHeading').textContent=jobsHistory?'Jobs / payment history':'Recent jobs / payments';
+    $('#viewAllJobs').hidden=jobsHistory;$('#recentJobs').hidden=!jobsHistory;$('#jobsPagination').hidden=!jobsHistory;
+    $('#jobsPrevious').disabled=jobCursors.length===1;$('#jobsNext').disabled=!jobNext;
+    $('#jobsPageInfo').textContent='Page '+jobCursors.length;
     $('#jobsTable').innerHTML = visibleRows.length
       ? visibleRows
           .map(
@@ -610,21 +612,20 @@
     $('#jobCollected').readOnly = unpaid;
     if (unpaid) $('#jobCollected').value = '0';
   }
-  function openJob(id) {
+  async function openJob(id) {
     const j = ledgerRows.find(r => r.id === id);
     $('#jobForm').reset();
     $('#jobError').textContent = '';
     $('#jobId').value = j?.id || crypto.randomUUID();
     $('#jobId').dataset.edit = j ? 'true' : '';
     $('#jobTitle').textContent = j ? 'Edit job / payment' : 'Add job / payment';
-    customerOptions = state.leads.map(l => ({
-      label: l.name + (l.email || l.phone ? ' — ' + (l.email || l.phone) : ''),
-      lead: l
-    }));
-    $('#jobCustomers').innerHTML = customerOptions
-      .map(x => `<option value="${safe(x.label)}"></option>`)
-      .join('');
-    const linked = j && customerOptions.find(x => x.lead.id === j.lead_id);
+    try {
+      const result=await api('/api/leads?lookup=1&limit=20');
+      const choices=result.leads||[];
+      if(j?.lead_id&&!choices.some(lead=>String(lead.id)===String(j.lead_id)))choices.unshift((await api('/api/leads/'+j.lead_id)).lead);
+      setJobCustomers(choices);
+    } catch(error){toast(error.message);return;}
+    const linked=j&&customerOptions.find(option=>String(option.lead.id)===String(j.lead_id));
     $('#jobCustomer').value = linked ? linked.label : j?.customer || '';
     $('#jobService').value = j?.service || 'Standard / recurring';
     $('#jobQuoted').value = j?.quoted_cents == null ? '' : j.quoted_cents / 100;
@@ -692,23 +693,22 @@
       toast(err.message);
     }
   }
-  $('#viewAllJobs').addEventListener('click', () => {
-    jobsHistory = true;
-    jobsPage = 0;
-    refreshAll();
-  });
-  $('#recentJobs').addEventListener('click', () => {
-    jobsHistory = false;
-    jobsPage = 0;
-    refreshAll();
-  });
-  $('#jobsPrevious').addEventListener('click', () => {
-    if (jobsPage > 0) jobsPage--;
-    renderJobs(ledgerRows);
-  });
-  $('#jobsNext').addEventListener('click', () => {
-    jobsPage++;
-    renderJobs(ledgerRows);
+  $('#viewAllJobs').addEventListener('click',()=>{jobsHistory=true;loadJobs().catch(error=>toast(error.message));});
+  $('#recentJobs').addEventListener('click',()=>{jobsHistory=false;jobRequest++;renderJobs(state.dashboard?.jobs);});
+  $('#jobsPrevious').addEventListener('click',()=>{if(jobCursors.length>1){jobCursors.pop();loadJobs(false).catch(error=>toast(error.message));}});
+  $('#jobsNext').addEventListener('click',()=>{if(jobNext){jobCursors.push(jobNext);loadJobs(false).catch(error=>toast(error.message));}});
+  function setJobCustomers(leads) {
+    customerOptions=leads.map(lead=>({label:lead.name+(lead.email||lead.phone?' — '+(lead.email||lead.phone):''),lead}));
+    $('#jobCustomers').innerHTML=customerOptions.map(option=>'<option value="'+safe(option.label)+'"></option>').join('');
+  }
+  let jobSearchTimer,jobLookupRequest=0;
+  $('#jobCustomer').addEventListener('input',()=>{
+    clearTimeout(jobSearchTimer);const request=++jobLookupRequest,value=$('#jobCustomer').value.trim();
+    if(customerOptions.some(option=>option.label===value))return;
+    jobSearchTimer=setTimeout(async()=>{
+      try {const result=await api('/api/leads?lookup=1&limit=20&q='+encodeURIComponent(value));if(request===jobLookupRequest)setJobCustomers(result.leads||[]);}
+      catch(error){toast(error.message);}
+    },300);
   });
   $('#addJob').addEventListener('click', () => openJob());
   $('#jobForm').addEventListener('submit', saveJob);
@@ -722,16 +722,18 @@
     if (del) deleteJob(del.dataset.jobDelete);
   });
 
+  let lastAutoRefresh=Date.now();
   const autoRefresh = () => {
     if (
       state.token &&
       !document.hidden &&
-      !$('#leadDialog').open &&
-      !$('#jobDialog').open
+      !document.querySelector('dialog[open]') &&
+      ['overviewView','analyticsView','salesView'].some(id=>$('#'+id).classList.contains('active-view')) &&
+      !jobsHistory && Date.now()-lastAutoRefresh>=300000
     )
-      refreshAll();
+      {lastAutoRefresh=Date.now();refreshAll();}
   };
-  setInterval(autoRefresh, 30000);
+  setInterval(autoRefresh, 300000);
   document.addEventListener('visibilitychange', autoRefresh);
   window.addEventListener('focus', autoRefresh);
   (async () => {
