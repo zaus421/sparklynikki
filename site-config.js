@@ -8,7 +8,7 @@ window.SITE_CONFIG = {
   city: "Rochester",
   state: "MN",
   country: "US",
-  serviceAreaText: "Rochester, Minnesota and nearby communities",
+  serviceAreaText: "Rochester, MN and nearby communities",
   replyTimeText: "usually within one business day",
   logoPath: "assets/logo.png",
 
