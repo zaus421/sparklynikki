@@ -1,6 +1,7 @@
 (() => {
   const cfg = window.SITE_CONFIG || {};
   const businessName = cfg.businessName || "Nikki's Sparkly Solutions";
+  const displayName = businessName.replace(/'/g, '’');
   const ownerName = cfg.ownerName || "Nikki";
   const destinationEmail = cfg.destinationEmail || cfg.publicEmail || "nikkisparklysolutions@gmail.com";
   const publicEmail = cfg.publicEmail || "";
@@ -15,7 +16,7 @@
   const siteUrl = configuredUrl || liveOrigin;
   const logoPath = (cfg.logoPath || 'assets/logo.png').replace(/^\//, '');
 
-  document.querySelectorAll('[data-business-name]').forEach(el => el.textContent = businessName);
+  document.querySelectorAll('[data-business-name]').forEach(el => el.textContent = displayName);
   document.querySelectorAll('[data-city-state]').forEach(el => el.textContent = cityState);
   document.querySelectorAll('[data-service-area]').forEach(el => el.textContent = serviceArea);
   document.querySelectorAll('[data-reply-time]').forEach(el => el.textContent = replyTime);
@@ -23,23 +24,23 @@
   const page = document.body.dataset.page || 'home';
   const seo = {
     home: {
-      title: `${businessName} | Residential Cleaning in ${cityState}`,
-      description: `Residential cleaning in ${cityState} from ${businessName}. Tell me about your home and request a free cleaning quote online.`,
+      title: `${displayName} | Residential Cleaning in ${cityState}`,
+      description: `Residential cleaning in ${cityState} from ${displayName}. Tell me about your home and request a free cleaning quote online.`,
       path: '/'
     },
     residential: {
-      title: `Residential Cleaning in ${cityState} | ${businessName}`,
-      description: `Weekly, every-other-week, and monthly residential cleaning in ${cityState} from ${businessName}. Request a free quote online.`,
+      title: `Residential Cleaning in ${cityState} | ${displayName}`,
+      description: `Weekly, every-other-week, and monthly residential cleaning in ${cityState} from ${displayName}. Request a free quote online.`,
       path: '/residential-cleaning.html'
     },
     deep: {
-      title: `Deep Cleaning in ${cityState} | ${businessName}`,
-      description: `Deep and one-time house cleaning in ${cityState} from ${businessName}. Tell me what your home needs and request a free quote.`,
+      title: `Deep Cleaning in ${cityState} | ${displayName}`,
+      description: `Deep and one-time house cleaning in ${cityState} from ${displayName}. Tell me what your home needs and request a free quote.`,
       path: '/deep-cleaning.html'
     },
     move: {
-      title: `Move-In & Move-Out Cleaning in ${cityState} | ${businessName}`,
-      description: `Move-in and move-out cleaning in ${cityState} for empty or nearly empty homes. Request a free quote from ${businessName}.`,
+      title: `Move-In & Move-Out Cleaning in ${cityState} | ${displayName}`,
+      description: `Move-in and move-out cleaning in ${cityState} for empty or nearly empty homes. Request a free quote from ${displayName}.`,
       path: '/move-out-cleaning.html'
     }
   }[page] || null;
@@ -63,8 +64,9 @@
       '@context': 'https://schema.org',
       '@type': 'LocalBusiness',
       '@id': `${siteUrl}/#business`,
-      name: businessName,
-      url: siteUrl,
+      name: displayName,
+      url: `${siteUrl}/`,
+      sameAs: ['https://g.page/r/CRxONIWlUpBDECE/review'],
       description: `One-person residential cleaning service serving ${serviceArea}.`,
       logo: `${siteUrl}/${logoPath}`,
       image: `${siteUrl}/${logoPath}`,
@@ -86,7 +88,16 @@
     if (phone) localBusiness.telephone = phone;
     const jsonLd = document.createElement('script');
     jsonLd.type = 'application/ld+json';
-    jsonLd.textContent = JSON.stringify(localBusiness);
+    jsonLd.textContent = JSON.stringify(page === 'home' ? {
+      '@context': 'https://schema.org',
+      '@graph': [localBusiness, {
+        '@type': 'WebSite',
+        '@id': `${siteUrl}/#website`,
+        name: displayName,
+        url: `${siteUrl}/`,
+        publisher: { '@id': `${siteUrl}/#business` }
+      }]
+    } : localBusiness);
     document.head.appendChild(jsonLd);
   }
 
