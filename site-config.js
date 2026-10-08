@@ -10,11 +10,5 @@ window.SITE_CONFIG = {
   country: "US",
   serviceAreaText: "Rochester, MN and nearby communities",
   replyTimeText: "usually within one business day",
-  logoPath: "assets/logo.png",
-
-  // Google reviews integration. Leave disabled until the real Business Profile exists.
-  googleReviewsEnabled: false,
-  googlePlaceId: "",
-  googleMapsApiKey: "",
-  googleReviewUrl: ""
+  logoPath: "assets/logo.png"
 };
