@@ -2,7 +2,7 @@
 
 ## Scope
 
-Production was inspected read-only on October 12, 2026: Worker `admin`, binding `DB`, database `sparklynikki-business`. The user supplied the deployed Worker bundle. No production Worker code, D1 schema or records were changed.
+Production was initially inspected read-only on October 12, 2026: Worker `admin`, binding `DB`, database `sparklynikki-business`. The user supplied the deployed Worker bundle. Release was subsequently authorized and performed on October 15, 2026 as recorded below.
 
 ## Automated checks
 
@@ -23,6 +23,14 @@ On October 12, 2026, both workflows were exercised at `http://127.0.0.1:8788/adm
 
 The local server uses a fixture session and is not an authentication/security test server. Automated tests exercise Worker authorization separately.
 
-## Not verified or performed
+## Production release, October 15, 2026
 
-No live deletion, D1 migration application, Worker deployment, or deployed integration test was performed. Local SQLite verifies SQL and relationship behavior; Cloudflare runtime behavior still needs staging verification before release. The frontend must not be released ahead of the proposed migration and Worker change. The feature branch is for review only.
+- Captured a D1 recovery bookmark before the additive migration, then successfully applied the `deleted_at` column and active-lead index individually.
+- Compared the full Cloudflare editor content with the tested Worker source, then deployed it. Cloudflare showed version `76b53738` as Active/Latest (previous version `0ed376f6`).
+- Pushed tested commit `1baac6025a0b238f64284923af92cd527ca0fe4b` to main. Live `admin/index.html`, `customer-removal.js`, `app.js`, and `operations.js` each returned HTTP 200 and matched the local source after newline normalization.
+- Before and after release, production retained 4 leads, 1 job, 4 inquiries and 3 quote requests. No leads were marked removed. Foreign-key errors, schedule orphans and reminder orphans were all zero.
+- An unauthenticated live `/api/health` request returned HTTP 401 with `Unauthorized`, as expected.
+
+## Remaining verification limit
+
+The live admin opened at its sign-in form. No authenticated live deletion or end-to-end production removal was performed. Both removal workflows were exercised locally as described above; this is not a claim that live deletion has been verified. No existing production customer was removed for testing.
