@@ -325,6 +325,7 @@
     $('#customerOpsId').value = lead?.id || '';
     $('#customerOpsTitle').textContent = lead ? 'Edit customer' : 'Add Existing Customer';
     $('#customerOpsError').textContent = '';
+    $('#removeOpsCustomer').hidden = !lead || !!lead.test_record;
     for (const [field, value] of Object.entries({ Name:lead?.name, Phone:lead?.phone, Email:lead?.email,
       Service:lead?.service, Contact:details.preferred_contact_method, Time:details.best_contact_time,
       Address:details.address, Message:lead?.message, Notes:lead?.notes })) {
@@ -347,6 +348,7 @@
         best_contact_time: $('#customerOpsTime').value, address: $('#customerOpsAddress').value.trim() }
     };
     button.disabled = true;
+    $('#removeOpsCustomer').disabled = true;
     try {
       await api('/api/operations/customers' + (id ? '/' + id : ''), {
         method: id ? 'PATCH' : 'POST', body: JSON.stringify(record)
@@ -358,8 +360,27 @@
       $('#customerOpsError').textContent = error.message;
     } finally {
       button.disabled = false;
+      $('#removeOpsCustomer').disabled = false;
     }
   }
+
+  $('#removeOpsCustomer').addEventListener('click', () => {
+    if ($('#customerOpsForm button[type="submit"]').disabled) return;
+    window.SPARKLY_CUSTOMER_REMOVAL.remove({ id: $('#customerOpsId').value, name: $('#customerOpsName').value,
+      dialog: $('#customerOpsDialog'), error: $('#customerOpsError') });
+  });
+  document.addEventListener('customer-removed', ({ detail: { id } }) => {
+    ++pages.customers.request;
+    ++lookupRequest;
+    state.leads = state.leads.filter(lead => String(lead.id) !== id);
+    state.lookup = state.lookup.filter(lead => String(lead.id) !== id);
+    if (String(state.selectedLead?.id) === id) state.selectedLead = null;
+    pages.customers.loading = false;
+    pages.customers.cursors = [null];
+    pages.customers.next = null;
+    renderAll();
+    loadAll();
+  });
 
   function setCustomScheduleVisibility() {
     const custom = $('#scheduleLeadId').value === 'custom';

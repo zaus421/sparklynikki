@@ -206,7 +206,8 @@
         <label>Revenue<input id="editRevenue" type="number" min="0" step="0.01"></label>
       </div>
       <label>Notes<textarea id="editNotes" rows="5"></textarea></label>
-      <div class="dialog-actions"><button type="button" id="cancelLead" class="secondary">Cancel</button><button type="submit" class="primary">Save changes</button></div>
+      <p id="leadError" class="form-error" role="alert"></p>
+      <div class="dialog-actions"><button type="button" id="removeLead" class="danger-button">Remove Customer</button><button type="button" id="cancelLead" class="secondary">Cancel</button><button type="submit" class="primary">Save changes</button></div>
     </form>
   </dialog>
 
@@ -252,7 +253,7 @@
         <label>Notes<textarea id="customerOpsNotes" rows="3" maxlength="4000"></textarea></label>
         <p id="customerOpsError" class="form-error" role="alert"></p>
       </div>
-      <div class="dialog-actions"><button type="button" class="secondary" data-close-ops="customer">Cancel</button><button type="submit" class="primary ops-primary">Save customer</button></div>
+      <div class="dialog-actions"><button type="button" id="removeOpsCustomer" class="danger-button" hidden>Remove Customer</button><button type="button" class="secondary" data-close-ops="customer">Cancel</button><button type="submit" class="primary ops-primary">Save customer</button></div>
     </form>
   </dialog>
 
@@ -317,7 +318,8 @@
   </dialog>
 
   <script src="./config.js?v=nikki-1"></script>
-  <script src="./app.js?v=scale-1"></script>
-  <script src="./operations.js?v=scale-1"></script>
+  <script src="./customer-removal.js?v=1"></script>
+  <script src="./app.js?v=customer-removal-1"></script>
+  <script src="./operations.js?v=customer-removal-1"></script>
 </body>
 </html>

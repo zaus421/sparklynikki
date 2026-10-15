@@ -402,6 +402,8 @@
     try { l=(await api('/api/leads/'+encodeURIComponent(id))).lead; }
     catch(error){toast(error.message);return;}
     if (!l) return;
+    if (l.deleted_at) { toast('This customer has been removed.'); return; }
+    $('#leadError').textContent = '';
     $('#leadId').value = l.id;
     $('#leadDialogTitle').textContent = l.name || 'Edit lead';
     $('#editStatus').value = l.status || 'New';
@@ -450,21 +452,49 @@
   async function saveLead(e) {
     e.preventDefault();
     const id = $('#leadId').value;
-    const body = {
-      status: $('#editStatus').value,
-      service: $('#editService').value.trim(),
-      quote_amount: Number($('#editQuote').value) || 0,
-      revenue: Number($('#editRevenue').value) || 0,
-      notes: $('#editNotes').value.trim()
-    };
-    await api(`/api/leads/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      body: JSON.stringify(body)
-    });
-    $('#leadDialog').close();
-    toast('Lead updated');
-    await refreshAll();
+    if (leadSaving || window.SPARKLY_CUSTOMER_REMOVAL.busy(id)) return;
+    leadSaving = true;
+    $('#removeLead').disabled = true;
+    $('#leadError').textContent = '';
+    try {
+      const body = {
+        status: $('#editStatus').value,
+        service: $('#editService').value.trim(),
+        quote_amount: Number($('#editQuote').value) || 0,
+        revenue: Number($('#editRevenue').value) || 0,
+        notes: $('#editNotes').value.trim()
+      };
+      await api(`/api/leads/${encodeURIComponent(id)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body)
+      });
+      $('#leadDialog').close();
+      toast('Lead updated');
+      await refreshAll();
+    } catch (error) {
+      $('#leadError').textContent = error.message;
+    } finally {
+      leadSaving = false;
+      $('#removeLead').disabled = false;
+    }
   }
+  let leadSaving = false;
+  $('#removeLead').addEventListener('click', () => {
+    if (leadSaving) return;
+    window.SPARKLY_CUSTOMER_REMOVAL.remove({ id: $('#leadId').value, name: $('#leadDialogTitle').textContent,
+      dialog: $('#leadDialog'), error: $('#leadError') });
+  });
+  document.addEventListener('customer-removed', ({ detail: { id } }) => {
+    ++leadRequest;
+    ++jobLookupRequest;
+    state.leads = state.leads.filter(lead => String(lead.id) !== id);
+    $$('[data-edit]').filter(button => button.dataset.edit === id).forEach(button => button.closest('tr')?.remove());
+    customerOptions = customerOptions.filter(option => String(option.lead.id) !== id);
+    setJobCustomers(customerOptions.map(option => option.lead));
+    toast('Customer removed. Historical records kept.');
+    loadLeads().catch(error => toast('Customer removed, but the list could not refresh: ' + error.message));
+    refreshAll();
+  });
   async function exportCsv() {
     $('#exportBtn').disabled=true;
     try {
